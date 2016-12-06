@@ -10,14 +10,12 @@ Jerka bestämmer sig för att pröva spelet Wumpus och efter att han startar spe
 Lisa som har spelat spelet flera gånger väljer i stället att gå direkt till en svårare nivå där Wumpus rör sig. Efter att hon valt så kommer startas spelet där jägaren befinner sig i en laburint där rummen är mörkerlagda tills man varit i dom. Laburinten är slumpmäsigt genererad där ett rum kan ha 4-1 möjliga håll att gå åt där alternativen blir allt färre ju längre man går från satartpunkten. varje rum har ett inehåll exempelvis ett botunlösthål, fladermös, mm. För att navigera så har hon ett aktivitetsfält dör hon kan välja vilket håll hon ska gå åt eller om hon ska skjuta, hon kan även se antalet drag hon gjort, highscore och annan statistik.
 
 ##Kodsklett
-´´´python
+```python
 
 import pygame, sys, pickle, shelve
 
 
-
-´´´
-
+```
 ##Programflöde och dataflöde
 
 
