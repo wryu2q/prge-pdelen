@@ -24,5 +24,5 @@ Om det går dåligt och jag får ont om tid så kommer vissa saker plockas bort.
 * att spara ett highscore.
 
 sånt som kan läggas till om det ska bli extra fint är: 
-* att ge jägaren ett begränsat antal pilar samt pilar som går att plocka upp
+* att ge jägaren ett begränsat antal pilar där man ska kunna få fler pilar genom att plocka upp pilar
 * En AI som inte är värdelös.
