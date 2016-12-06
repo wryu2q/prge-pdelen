@@ -19,5 +19,10 @@ import pygame, sys, pickle, shelve
 ##Programflöde och dataflöde
 
 
-##Plan B och breodering i kanterna
+##Plan B och brodering i kanterna
+Om det går dåligt och jag får ont om tid så kommer vissa saker plockas bort. Sådant som kan plockas bort är: 
+* att spara ett highscore.
 
+sånt som kan läggas till om det ska bli extra fint är: 
+* att ge jägaren ett begränsat antal pilar samt pilar som går att plocka upp
+* En AI som inte är värdelös.
