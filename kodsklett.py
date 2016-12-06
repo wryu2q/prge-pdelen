@@ -42,12 +42,6 @@ def close(state) :
     #state syftar på vad som ska hända när programet stäng
     pass
 
-
-
-
-
-
-
 class room (object) :
     #klass som beskriver varje rum som ett object
     #objektet ska inkludera, inehållet i rummet så som ett hål
