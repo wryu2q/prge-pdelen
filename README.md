@@ -260,7 +260,6 @@ class Stats (object) : #klass för att spara statistik och ge highscore
 ```
 ##Programflöde och dataflöde
 
-
 ##Plan B och brodering i kanterna
 Om det går dåligt och jag får ont om tid så kommer vissa saker plockas bort. Sådant som kan plockas bort är: 
 * att spara ett highscore.
