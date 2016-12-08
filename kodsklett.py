@@ -1,4 +1,6 @@
+#kodsklett för spelet wumpus
 
+#allt är i ett dokument i sklettet men färdiga produkten lär vara uppdelad
 
 import pygame, sys, time, random, pickle, shelve
 
@@ -22,12 +24,10 @@ main_screen= pygame.display.set_mode(SCREEN_SIZE) #skapar skärmen som man ritar
 #x kordinat, y kordinat, bredden, höjden för det som ritas på skärmen
 #notera att i pygame beskrivs oftast kordinaten för något med det som är högst up till vänster
 
-def message(x,y,font_size,text,font,color) :
-    #ritar ett text medelande på main_screen
+def message(x,y,font_size,text,font,color) :#ritar ett text medelande på main_screen
     pass
 
-def message_box(x,y,width,height,text,color) :
-    #ritar en ruta på main_screen med en text på
+def message_box(x,y,width,height,text,color) :#ritar en ruta på main_screen med en text på
     pass
 
 def text_button(x,y,width,height,text,color,active_color,action,action_arguments) :
@@ -37,27 +37,188 @@ def text_button(x,y,width,height,text,color,active_color,action,action_arguments
     #action_arguments är en tuple av dom argument som action ska ha
     pass
 
-def close(state) :
-    #stänger hela programet med eventuel funktion när det stängs
-    #state syftar på vad som ska hända när programet stäng
+def close(state=None) :#stänger hela programet med eventuel funktion när det stängs
+    #state syftar på vad som ska hända när programet stäng exempelvis kan ett medelande duka upp 
     pass
 
-class room (object) :
+
+#nedon kommer logik om själva spelet och spelplanen
+
+#matrisen för spelplanen har x,y numrering som en matte matris fast med 00 uppe i högra hörnet
+
+#nedan kommer lite logic för att generera rummen och visa dom
+#tanken bakom rummen är att dom ska hålla sig inom en 16x12 matris där alla rutor är rum
+#och rummen är 60x60 pixlar. rummen slumpas där ett rum kan ha 4-1 in/utgångar och varje
+#rum kan ha ett inehåll så som hål eller flygande råttor.
+
+#generelt sätt skrivs riktningarna i ordningen med upp först och sedan som klockan om det
+#ska inkludera siffror så blir up 0 och sedan ökar det med 1 i ordningen ovan
+
+game_matrix=([],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]) #globala matrisen som håller reda på
+#laburinten varje lista i tupeln representerar en kolumn och alla 16 listor blidar brädet
+
+def generate_rooms() :#funktionen som ankallas när alla rum/laburinten ska slumpas om.
+    #funktionen kommer att nollställa föregående laburint och returnera en ny.
+
+    #Laburinten är tänkt att beffina sig i en matris(en lista med listor i) som börjar
+    #med att alla element är None och sedan byggerpå med objekt från klassen Room. rummen
+    #manipuleras sedan allt eftersom det genereras.
+
+    #det är tänkt att genererandet ska ske med hjälp av en rekursiv funktion som slumpar ett
+    #rum som ankalar att slumpa åt ett håll där det saknas förklaring d.v.s om det inte
+    #finns gång eller vägg åt det hållet. Om det finns ett annat rum åt det slumpade hållet
+    #så slumpas det om det ska finnas en väg eller gång mellan vilket ändrar båda objekten om
+    #det inte är så att det påstötta rumet slumpat en vägg, dåt blir det en vägg
+    #Om det slumpas åt ett håll där det inte finns ett rum så slumpas om det ska finnas en vägg
+    #eller ett nytt rum, om det ska skapas ett rum ankalla funktionen sig själv
+    pass
+
+def add_interior():#lägger till slumpat inehåll i den slumpade laburinten så som hål
+    pass
+
+def display_rooms():#funktion som går igenom matrisen för alla slumpade rum och ritar planen
+    #om ett rum inte ska visas eftersom det är obesökt eller det står None i matrisen så
+    #ritas en svart ruta eller liknande
+
+    #om rummet är besökt ska det ritas en bild
+    #bilden jag tänkt mig ska ritas är den cirkel, cirkeln ska få rektanglar åt alla hål som det
+    #finns gångar, det är möjligt att jag snyggar till det senare
+    #för att visa inehållet ritar jag något extra,  typ svart ring för hål etc
+
+    #jägaren och Wumpus ritas separat
+    pass
+
+def random_room():#returnerar en kordinat för ett rum utan inehåll
+    pass
+
+#har tänkt att använda mig av globala variabler så att man inte begöver hålla koll på
+#massa argument och returnerade värden
+hunter_coordinates=[0,0] #kordinaterna för jägaren
+wumpus_coordinates=[0,0] #kordinaterna för wumpus
+difficulty='easy' #global variabel för vilken svårighetsgrad det är, ändras när man väljer grad
+
+def possible_moves_hunter(): #retrnerar en tupple av alla möjliga riktningar som jägaren kan gå
+    pass
+
+def possible_moves_wumpus():#retrnerar en tupple av alla möjliga riktningar som wumpus kan gå
+    #skilnaden från jägaren är att wumpus inte kan välja att till ett hål
+    pass
+
+def hunter_move (direction) :#ändrar på jägarens x,y beroende på riktning
+    #ska även kontrollera riktningen så man inte går genom vägg
+    pass
+
+
+def hunter_shoot(direction):#funktion som körs när man ska skjuta
+    pass
+
+def display_hunter(x,y):#en bild av jägaren beroende på var på planen han ska vara
+    pass
+
+def wumpus_walk(): #räknar ut vart wumpus ska gå och ändrar på wumpus_coordinates
+    pass
+    
+
+def taskbar():#funktionen som kör för att visa aktivitetsfältet i spelet
+    #aktivitetsfältet blir 320x720 pixlar och ska nkludera knappar för vilket hål man ska gå till
+    #och information om vad jägaren känner i omgivningen
+    pass
+
+def run_game() :#kör spelet, börjar med att generera plan sedan ge spelaren alternativ etc
+    pass
+
+#nedan kommer massa info om sidor annat än spelsidan
+
+def win_screen () :#funktionen som dyker upp när man vunnit och ska skriva sitt namn
+    #det finns möjlighet att jag importerar en modul för text input i pygame, annars får den köras
+    #sominput i kommandotolken
+    pass
+
+def save_score() :#funktionen som kör när man ska spara spelerens highscore i det
+    #separata dokumentet
+    pass
+
+def high_score_screen():#funktionen som körs när man ska se föregående spelares high score 
+    pass
+
+def game_mode_menu_screen():#sidan menyn som dykerupp när man ska välja svårighetsgraden
+    pass
+
+def instructions_screen (): #funktion man kör för att visa instruktions sidan
+    #kommer mest vara en text med en knapp som leder tillbaks till menyn eller stänger programet
+    pass
+
+
+#nedan kommer klasserna
+
+class Room (object) :
     #klass som beskriver varje rum som ett object
-    #objektet ska inkludera, inehållet i rummet så som ett hål
-    def init(self,roomx,roomy,content=None,visited=None) :
+    #objektet ska inkludera om:
+    #det finns ett rum brevid sig eller vägg åt varje håll om det står None har
+    #det inte genererats klart, True om det finns dörr och False om det är vägg
+
+    #vad rummet inehåller exempelvis om det finns ett dödshål i rummet, notera att det inte är
+    #tänkt att Wumpus eller jägaren är ett inehåll, om inehållet är None så är det bara ett rum
+
+    #ska även inkludera om rummet besökts av spelaren
+    
+    #det är möjligt att jag inkluderar rummets x och y men tvivelaktigt eftersom objektten sparas i
+    #en matris dvs, rummet sparas i en lista så objektets namn ankalas ej utan dess kordinat ankalas
+
+    #generelt sätt skrivs riktningarna i ordningen med upp först och sedan som klockan om det
+    #ska inkludera siffror så blir up 0 och sedan ökar det med 1 i ordningen ovan
+    
+    total=0 #statisk metod så att man kan hålla reda på antalet rum som skapats, bra om chansen för
+       #att generera nya rum ska minska desto fler rum man har
+    
+    def init(self,up=None,right=None,down=None,left=None,content=None,roomx=None,roomy=None,visit=False) :
+        Room.total +=1 #ska finnas lite mer...
+
+    def set_direction  (self,connection) : #bestämer att det ska finnas gång/vägg åt de bestämde
+        #hållet, 
+        #om connection är True så gång, False om Vägg, None anses som ogenererad
+        pass
+    
+    def set_content(self,content) : #bestämmer rumets inehåll, exempelvis dödshål
+        self.content=content
+
+    def get_content(self) : #returnerar vad som finns i rummet
+        return self.content
+    
+    def get_direction(self,direction) : #returnerar om det finns vägg/gång åt den begärda riktningen
+        #argumentet direction är riktningen man vill ha, 0 är upp och sedan som klockan
+        pass
+    
+    def get_total(): #returnerar antalet rum som skapats
+        return Room.total
+
+    def reset() :#ska ankallas när det ska slumpas nya rum
+        #exempelvis nollställas räknaren för totala antalet rum
+        pass
+
+    def number_of_unknown_directions(self):#returnerar antalett okända gångar/väggar vid rummet
+        pass
+
+    def unknown_directions(self):#returnerar en tuple för alla up/right/down/left som är None
+        #0<=up, 1<=rigth, 2<=down,3<=left
+        pass
+
+    def number_of_paths(self) :#returnerar antalet gångar som finns d.v.s riktningar med True 
+        pass 
         
+    def path_directions(self):#returnerar riktningarna där det finns gångar som en tupple 
+        pass
+    
+class Stats (object) : #klass för att spara statistik och ge highscore
+    #klassen ska inkludera namn, svårighetsgraden, och antalet darg mm
 
-
-class stats (object) : #klass för att spara statistik och ge highscore
-    #klassen ska inkludera namn, svårighetsgraden, och antalet darg
-
-    def __init__(self,difficulty=None,name=None,moves=0,found_rooms=1):
+    def __init__(self,difficulty=None,arrows=5,name=None,moves=0,found_rooms=1):
         self.difficulty=difficulty
         self.name=name
         self.moves=moves
         self.found_rooms=found_rooms
-
+        #kan eventuelt bli fler variabler
+        
     def __str__(high_score=False) : #skriverut statistik om spelaren
         #om highscore är True så ska info relevant för spelarens highscore returneras
         pass
@@ -71,7 +232,15 @@ class stats (object) : #klass för att spara statistik och ge highscore
     def get_statistics(self):#ger statistik som anses vara relevant under spelets gång
         pass
 
+    def shots_fired(self) :#visar hus många skott som skjutits
+        pass
+
+    def add_shots_fired(self) :#lägger till ett extra skott som skjutits
+        pass
+    
+    def number_of_arrows(self):
+        pass
+    
     def set_name(self): #ändrar namn, bra att ha när spelarens highscore ska sparas
         #men behövs ej under spelets gång för at visa statistik
         pass
-
