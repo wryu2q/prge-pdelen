@@ -10,6 +10,7 @@ clock=pygame.time.Clock() #bra för senare bruk
 #färger som konstanter som skrivs som tupler i RGB
 BLACK       =(0,0,0)
 GREY        =(128,128,128)
+GREY_DARK   =(50,50,50)
 WHITE       =(255,255,255)
 RED         =(255,0,0)
 RED_LIGHT    =(255,100,100)
