@@ -24,7 +24,7 @@ class Room (object) :
     def __init__(self,up=None,right=None,down=None,left=None,content=None,roomx=None,roomy=None,visit=False) :
         self.direction_list=[up,right,down,left]#listan för vad som finns i rummets riktningar
            #None är ogenererad, True är gång, False är vägg
-        self.visited=True  #True om rummet besökts av spelaren False om obesökt
+        self.visited=False  #True om rummet besökts av spelaren False om obesökt
         self.content=content
         Room.total +=1 #vi vill att totala antalet rum ska öka när ett rum skapas
     def set_direction  (self,direction,connection) : #bestämer att det ska finnas gång/vägg åt
@@ -138,9 +138,8 @@ class Matrix(object) : #klass som skapar spelplasmatrisen och fylls på allt eft
         return xy_list
                 
 class Room_matrix (Matrix):#en matris som genererar en matris med rum
-
     #obs kodupprepning
-    def set_difficulty (self,difficulty):
+    def set_difficulty (self,difficulty):#difficult förväntas vara ett objekt
         self.difficulty=difficulty
     def get_difficulty (self) :
         return self.difficulty
@@ -178,7 +177,7 @@ class Room_matrix (Matrix):#en matris som genererar en matris med rum
                 break
             else:
                 self.number_of_generated_mazes+=1
-        print('atemptes:',self.number_of_generated_mazes)#test för att se om genererandet är bra
+        print('generate atemptes:',self.number_of_generated_mazes)#antal gånger rum genererats
 
         
     def generate_rooms_recursion(self,x,y) :#den rekursiva funktionen som genererar rum, x och y
@@ -222,11 +221,14 @@ class Room_matrix (Matrix):#en matris som genererar en matris med rum
                     self.call_object(*random_direction_xy).set_direction(random_direction_flip,True)#nya rummet väg till egna
                     self.generate_rooms_recursion(*random_direction_xy)#generera nya rummet
 
-    def random_empty_room(self) :#returnerar ett rum i matrisen som saknar inehåll
+    def random_empty_room_xy(self) :#retrunerar x,y kordinater för tomt rum
         while True : #prövar rum tills man hittar ett
             random_xy=self.random_object_xy()#man vill bara slumpa en gång per runda
             if self.call_object(*random_xy).get_content() ==None :
-                return self.call_object(*random_xy)
+                return random_xy
+                    
+    def random_empty_room(self) :#returnerar ett rum i matrisen som saknar inehåll
+        return self.call_object(*self.random_empty_room_xy())
 
     def add_specific_content(self,content,amount) :#lägger till ett hål mm i random tomt ställe
         if amount ==0 :
@@ -237,7 +239,7 @@ class Room_matrix (Matrix):#en matris som genererar en matris med rum
             
     def add_all_content (self) : #lägger till massa hål mm till laburinten
         self.difficulty.set_content_multiplier()
-        print(self.difficulty.hole_amount())
+        print('amount of holes',self.difficulty.hole_amount(),'bats',self.difficulty.bat_amount())
         self.add_specific_content('hole',self.difficulty.hole_amount())
         self.add_specific_content('bat',self.difficulty.bat_amount())
         self.add_specific_content('arrows',self.difficulty.find_arrow_amount())
@@ -249,12 +251,17 @@ class Room_matrix (Matrix):#en matris som genererar en matris med rum
                     near_content_list.append( (self.call_object(*self.get_direction_xy(x,y,direction)).get_content()))
             else :
                 continue
-        print(near_content_list)
         return near_content_list
     
     def add_room (self,x,y):#skapar ett rum av klassen Room och lägger det i matrisen
         self.matrix_list[x][y]=Room()
-            
+
+    def create_maze(self) :#skapar laburinten från generering till att fylla med inehåll mm
+        self.difficulty.set_room_multiplier()
+        self.generate_rooms()
+        self.add_all_content()
+        
+        
 class Stats (object) : #klass för att spara statistik och ge highscore
     #klassen ska inkludera namn, svårighetsgraden, och antalet darg mm
     def __init__(self,difficulty=None,arrows=5,name=None,moves=0,found_rooms=1):
@@ -283,23 +290,159 @@ class Stats (object) : #klass för att spara statistik och ge highscore
         pass
 
 class Character (object) :#klass för att beskriva var karaktärerna är i x,y led
-    def __init__ (self,x,y) :
-        self.x=x
-        self.y=y
-    def change_x (self,new_x) :
+    instance_list = []
+    def __init__ (self,matrix,difficulty) :
+        Character.instance_list.append(self)
+        self.matrix=matrix#matrisen förutsätts vara Room_matrix för många metoder
+        self.x=1#måste definieras även om det inta användes
+        self.y=1
+        self.difficulty=difficulty#notera att ska vara ett objekt
+
+        
+    def change_x (self,new_x) :#ändrar spelarens x kordinat
         self.x=new_x
-    def change_y(self,new_y) :
+    def change_y(self,new_y) :#ändrar spelarens y kordinat
         self.y=new_y
+    def change_xy (self,x,y) :#ändrar spelarens x och y kordinat
+        self.change_x(x)
+        self.change_y(y)
     def get_x(self):
         return self.x
     def get_y(self):
         return self.y
-
+    def get_xy (self) :
+        return (self.x,self.y)
+    def place_random_empty_room(self) :#plaserar karaktären i ett tomt rum utan hinder,karaktärer
+        while True :
+            random_empty_room_xy=self.matrix.random_empty_room_xy()#notera lista/tuple
+            if Character.get_all_xy().count(random_empty_room_xy) != 0 :
+                continue
+            else :
+                self.change_xy(*random_empty_room_xy)
+                return random_empty_room_xy
+            
+    def get_possible_directions(self) :#returnera en lista/tuple av alla väg riktning
+        return self.matrix.call_object(self.x,self.y).path_directions()
+    
+    @classmethod
+    def get_all_xy (cls):
+        xy_list=[]
+        for instance in Character.instance_list :
+            xy_list.append(instance.get_xy())
+        return xy_list
+    
 class Wumpus(Character) :
-    pass
+    def get_possible_directions(self) :#skilnaden är att han inte kan gå ner i hål
+        paths_list=super(Wumpus,self).get_possible_directions()
+        new_path_list=[]
+        for direction in paths_list :
+            if (self.matrix.call_object(*self.matrix.get_direction_xy(self.x,self.y,direction)).get_content()) ==('hole') :
+                continue
+            else :
+                new_path_list.append(direction)
+        return new_path_list
 
+    def wumpus_new_position(self,x,y):#kan äta fladdermöss, tar ej hänsyn till hans plasering
+        self.x=x
+        self.y=y
+        if self.matrix.call_object(x,y).get_content() == 'bat':#wumpus äter möss
+            self.matrix.call_object(x,y).set_content(None)
+
+    def wumpus_move (self,x_hunter=None,y_hunter=None):#wumpus flyttar ska sig
+        possible_directions=self.get_possible_directions()
+        if possible_directions==[]  :#om det iinte går att gå
+            print('wumpus got fucked')
+            self.place_random_empty_room()
+        elif random.random() <self.difficulty.wumpus_stay_chance() :#chansen att wumpus ska stanna
+            print('wumpus stay')
+            return
+        elif random.random()<self.difficulty.wumpus_move_chance()  : #wumpus ska röra sig random
+            print('wumpus random walk')
+            direction=random.choice(possible_directions)#slumpar riktning
+            self.wumpus_new_position(*self.matrix.get_direction_xy(self.x,self.y,direction))
+            return
+        elif random.random()<self.difficulty.wumpus_move_to_player_chance() and (x_hunter != None or y_hunter != None ) :#röra sig mot spelaren
+            for tries in range(100):#körs tills han valt möjlig väg eller ingen väg funkar
+                if random.random() > 0.5 :#han går efter x
+                    if self.x<x_hunter: #vilken riktning ska det vara
+                        direction=1
+                    else :
+                        direction=3
+                else : #han går efter y
+                    if self.y<y_hunter :
+                        direction=2
+                    else :
+                        direction=0
+                if possible_directions.count(direction)==0:#kollar om man kan gå åt hållet
+                    print(possible_directions,direction)
+                    continue
+                else : #han ska gå
+                    print('wumpus hunt',possible_directions,direction)                    
+                    self.wumpus_new_position(*self.matrix.get_direction_xy(self.x,self.y,direction))
+                    return
+            self.wumpus_move(x_hunter,y_hunter)#funka inte, pröva nytt alternativ 
+        else:
+            print('wumpus confused')
+            return
+            
 class Hunter(Character) :
-    pass
+
+    def __init__(self,matrix,difficulty) :
+        super(Hunter,self).__init__(matrix,difficulty)
+        self.shoot=False #om jägaren drar strängen eller ej
+    
+    def hunter_move (self,direction) :
+        xy=self.matrix.get_direction_xy(self.x,self.y,direction)
+        self.hunter_new_position(*xy)
+    def hunter_new_position(self,x,y) :
+        self.x=x
+        self.y=y
+        self.matrix.call_object(x,y).visit_room()
+        if self.matrix.call_object(x,y).get_content()=='bat' :
+            self.place_random_empty_room()
+        elif self.matrix.call_object(x,y).get_content()=='hole' :
+            self.dead()
+        elif self.matrix.call_object(x,y).get_content()=='arrows' :
+            pass
+    def hunter_near_content(self) :#ger dom hinder i rummen brevid
+        return self.matrix.get_near_content(self.x,self.y)
+    def hunter_senses(self,wumpus_x=99,wumpus_y=99) :#får det jägaren känner, som hinder och wumpus
+        sense_list=[]#lista som fylls med all jägaren känner
+        sense_list.extend(self.hunter_near_content())#lägger till alla nära hinder
+        if ((wumpus_x-self.x)**2+(wumpus_y-self.y)**2)**0.5 <=self.difficulty.sense_wumpus_radius():
+            sense_list.append('wumpus')
+        return sense_list
+        
+    def place_random_empty_room(self) :
+        xy=super (Hunter,self).place_random_empty_room()
+        self.hunter_new_position(*xy)
+
+    def got_killed(self,wumpus_x,wumpus_y):#blev han dödad?
+        if self.x==wumpus_x and self.y==wumpus_y :
+            return self.dead()
+        elif self.matrix.call_object(self.x,self.y).get_content() =='hole':
+            return self.dead()
+
+    def hunter_shoot(self,direction,wumpus_x,wumpus_y):#funktion som körs när man ska skjuta
+        #skjuter rakt, annars blir det för lätt eftersom grafiken är som den är
+        shoot_length=self.difficulty.shoot_length()#hur långt kan hen skjuta
+
+        if self.shoot == True :
+            self.shoot_toggle ()
+            if (0<(direction%2)*((self.x-wumpus_x)*(direction-2)) <= shoot_length and wumpus_y==self.y) or( 0<((direction+1)%2)*((wumpus_y-self.y)*(direction-1)) <=shoot_length and wumpus_x==self.x):#självklar formel för att man träffar
+                return True#om han ska skuta blir en rariabel true
+            else :
+                return False
+            
+    def shoot_toggle(self) :
+        self.shoot=not self.shoot
+        
+    def is_shooting(self) :
+        return self.shoot
+    
+    def dead(self) :
+        return True
+        print ('dead')
     
     
 class Difficulty (object) :#håller reda på svårighetsgrad och chanser
@@ -307,6 +450,10 @@ class Difficulty (object) :#håller reda på svårighetsgrad och chanser
         self.difficulty=difficulty
         self.set_room_multiplier()
         self.set_content_multiplier()
+
+    def __str__(self) :
+        return self.difficulty
+        
     def get_difficulty(self) :
         return  difficulty
     def change_difficulty(self,new_difficulty) :
@@ -329,14 +476,45 @@ class Difficulty (object) :#håller reda på svårighetsgrad och chanser
         return  math.sin(1*Room.get_total_number_of_paths()) 
     def set_content_multiplier (self):#avgör hur många objekt av nått det ska bli
         self.content_multiplier=0.1*self.room_multiplier*Room.get_total()
-    
     #kodupprepning?    
     def hole_amount (self) :
         return int(1*self.content_multiplier)
     def bat_amount(self) :
-        return int(1*self.content_multiplier)
+        return int(2*self.content_multiplier)
     def find_arrow_amount(self) :
         if self.difficulty=='easy' :
             return 0
         else :
             return int(50/self.content_multiplier)
+    def wumpus_stay_chance (self) :
+        if self.difficulty=='easy' :
+            return 0.9
+        if self.difficulty=='medium' :
+            return 0.3
+        if self.difficulty=='hard' :
+            return 0.2
+        else :
+            return 1
+    def wumpus_move_chance (self) :
+        if self.difficulty == 'easy' :
+            return 0.2
+        if self.difficulty=='medium' :
+            return 0.7
+        if self.difficulty=='hard' :
+            return 0.3
+        else :
+            return 1
+    def wumpus_move_to_player_chance (self) :
+        if self.difficulty == 'easy' :
+            return 0.1
+        if self.difficulty=='medium' :
+            return 0.1
+        if self.difficulty=='hard' :
+            return 0.9
+        else :
+            return 1
+    def sense_wumpus_radius(self) :
+        return 1
+    def shoot_length(self) :#jur långt kan jägaren skjuta, notera att det är rakt
+        #om det är 1 betyder det att han skjuter till och med rummet brevid
+        return 2
