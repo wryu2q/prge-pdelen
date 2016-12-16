@@ -261,34 +261,6 @@ class Room_matrix (Matrix):#en matris som genererar en matris med rum
         self.generate_rooms()
         self.add_all_content()
         
-        
-class Stats (object) : #klass för att spara statistik och ge highscore
-    #klassen ska inkludera namn, svårighetsgraden, och antalet darg mm
-    def __init__(self,difficulty=None,arrows=5,name=None,moves=0,found_rooms=1):
-        self.difficulty=difficulty
-        self.name=name
-        self.moves=moves
-        self.found_rooms=found_rooms
-        #kan eventuelt bli fler variabler
-    def __str__(high_score=False) : #skriverut statistik om spelaren
-        #om highscore är True så ska info relevant för spelarens highscore returneras
-        pass
-    def add_move(self) : #läggertill ett drag och returnerar antalet drag
-        pass
-    def get_highscore(self):#räknar ut ett highscore efter lämplig algoritm
-        pass
-    def get_statistics(self):#ger statistik som anses vara relevant under spelets gång
-        pass
-    def shots_fired(self) :#visar hus många skott som skjutits
-        pass
-    def add_shots_fired(self) :#lägger till ett extra skott som skjutits
-        pass
-    def number_of_arrows(self):
-        pass
-    def set_name(self): #ändrar namn, bra att ha när spelarens highscore ska sparas
-        #men behövs ej under spelets gång för at visa statistik
-        pass
-
 class Character (object) :#klass för att beskriva var karaktärerna är i x,y led
     instance_list = []
     def __init__ (self,matrix,difficulty) :
@@ -342,7 +314,7 @@ class Wumpus(Character) :
                 new_path_list.append(direction)
         return new_path_list
 
-    def wumpus_new_position(self,x,y):#kan äta fladdermöss, tar ej hänsyn till hans plasering
+    def wumpus_new_position(self,x,y):#kan äta fladdermöss, tar ej hänsyn till hens plasering
         self.x=x
         self.y=y
         if self.matrix.call_object(x,y).get_content() == 'bat':#wumpus äter möss
@@ -362,7 +334,7 @@ class Wumpus(Character) :
             self.wumpus_new_position(*self.matrix.get_direction_xy(self.x,self.y,direction))
             return
         elif random.random()<self.difficulty.wumpus_move_to_player_chance() and (x_hunter != None or y_hunter != None ) :#röra sig mot spelaren
-            for tries in range(100):#körs tills han valt möjlig väg eller ingen väg funkar
+            for tries in range(100):#körs tills hen valt möjlig väg eller ingen väg funkar
                 if random.random() > 0.5 :#han går efter x
                     if self.x<x_hunter: #vilken riktning ska det vara
                         direction=1
@@ -385,25 +357,42 @@ class Wumpus(Character) :
             print('wumpus confused')
             return
             
-class Hunter(Character) :
+class Hunter(Character) :#klass för jägaren med metoder för att röra sig och ststistik
 
     def __init__(self,matrix,difficulty) :
         super(Hunter,self).__init__(matrix,difficulty)
+        self.reset_statistics()
+        
+    def reset_statistics (self) :
+        self.arrows=self.difficulty.number_of_start_arrows()#pilar hen har
+        self.shots_fired=0#skott som skjutits
+        self.game_ended=False
         self.shoot=False #om jägaren drar strängen eller ej
-    
+        self.found_rooms=0#antalet rum jägaren hittat(redan hittade räknas ej
+        self.moves=0
+        self.cause_of_end=None#varför sluta spelet ex wumpus var hungrig
+
+    def game_restart (self) :
+        self.reset_statistics()
+        self.place_random_empty_room()
+        
     def hunter_move (self,direction) :
         xy=self.matrix.get_direction_xy(self.x,self.y,direction)
         self.hunter_new_position(*xy)
-    def hunter_new_position(self,x,y) :
+        self.moves+=1
+    def hunter_new_position(self,x,y) :#
         self.x=x
         self.y=y
+        if self.matrix.call_object(x,y).room_visited() :
+            self.found_rooms+=1
         self.matrix.call_object(x,y).visit_room()
-        if self.matrix.call_object(x,y).get_content()=='bat' :
+        if self.matrix.call_object(x,y).get_content()=='bat' :#om man går på fladder möss, flyg
             self.place_random_empty_room()
-        elif self.matrix.call_object(x,y).get_content()=='hole' :
-            self.dead()
-        elif self.matrix.call_object(x,y).get_content()=='arrows' :
+        elif self.matrix.call_object(x,y).get_content()=='hole' :#dör om man går på hål,
             pass
+        elif self.matrix.call_object(x,y).get_content()=='arrows' :
+            self.arrows+=self.difficulty.number_of_pick_up_arrows()
+            self.matrix.call_object(x,y).set_content(None)
     def hunter_near_content(self) :#ger dom hinder i rummen brevid
         return self.matrix.get_near_content(self.x,self.y)
     def hunter_senses(self,wumpus_x=99,wumpus_y=99) :#får det jägaren känner, som hinder och wumpus
@@ -417,33 +406,57 @@ class Hunter(Character) :
         xy=super (Hunter,self).place_random_empty_room()
         self.hunter_new_position(*xy)
 
-    def got_killed(self,wumpus_x,wumpus_y):#blev han dödad?
-        if self.x==wumpus_x and self.y==wumpus_y :
-            return self.dead()
-        elif self.matrix.call_object(self.x,self.y).get_content() =='hole':
-            return self.dead()
-
+    def got_killed(self,wumpus_x,wumpus_y):#blev hen dödad?
+        if self.x==wumpus_x and self.y==wumpus_y :#om man blev äten av wumpus
+            self.dead('wumpus')
+            return True
+        elif self.matrix.call_object(self.x,self.y).get_content() =='hole':#om man trillar i hål
+            self.dead('hole')
+            return True
+        else :
+            return False
     def hunter_shoot(self,direction,wumpus_x,wumpus_y):#funktion som körs när man ska skjuta
         #skjuter rakt, annars blir det för lätt eftersom grafiken är som den är
         shoot_length=self.difficulty.shoot_length()#hur långt kan hen skjuta
 
         if self.shoot == True :
             self.shoot_toggle ()
+            self.arrows-=1
+            self.shots_fired+=1
             if (0<(direction%2)*((self.x-wumpus_x)*(direction-2)) <= shoot_length and wumpus_y==self.y) or( 0<((direction+1)%2)*((wumpus_y-self.y)*(direction-1)) <=shoot_length and wumpus_x==self.x):#självklar formel för att man träffar
-                return True#om han ska skuta blir en rariabel true
+                self.game_ended=True
+                self.cause_of_end='win'
+                return True#om hen träffar så returneras True
             else :
                 return False
-            
-    def shoot_toggle(self) :
+
+    def shoot_toggle(self) :#om han drar strängen och ska sluta eller motsatt
         self.shoot=not self.shoot
+
+    def get_number_of_arrows(self) :
+        return self.arrows
         
-    def is_shooting(self) :
+    def is_shooting(self) :#om han drar strängen
         return self.shoot
     
-    def dead(self) :
+    def dead(self,cause='wumpus') :#kallas på om han blir dödad
+        self.game_ended=True
+        self.cause_of_end=cause
         return True
-        print ('dead')
-    
+    def get_statistics_string(self) :#ska ge divere statisk för att skriva ut
+        return str('arrows:'+ str(self.arrows)+' moves:'+ str(self.moves)+ ' found rooms:'+ str(self.found_rooms))
+        
+    def has_game_ended (self):#har spelet tagit slut?
+        return self.game_ended
+
+    def cause_of_ended_game (self,wumpus_x,wumpus_y) :#hur slutade spelet
+        if self.game_ended :
+            if self.cause_of_end =='win' :#ser om det var för att man vann
+                return 'win'
+            self.got_killed(wumpus_x,wumpus_y)#om man inte vann så räknas det ut varför man är död
+            return self.cause_of_end
+        else:
+            return None
     
 class Difficulty (object) :#håller reda på svårighetsgrad och chanser
     def __init__ (self,difficulty='easy') :
@@ -481,40 +494,36 @@ class Difficulty (object) :#håller reda på svårighetsgrad och chanser
         return int(1*self.content_multiplier)
     def bat_amount(self) :
         return int(2*self.content_multiplier)
+
+    def difficulty_chance(self,chance_easy,chance_medium,chance_hard) :
+        if self.difficulty == 'easy' :
+            return chance_easy
+        elif self.difficulty == 'medium' :
+            return chance_medium
+        elif self.difficulty == 'hard' :
+            return chance_hard
+        else :
+            return 0.5
+    
     def find_arrow_amount(self) :
-        if self.difficulty=='easy' :
-            return 0
-        else :
-            return int(50/self.content_multiplier)
+        return self.difficulty_chance(0,5,5)#borde bero på rumm men hitta ingen snygg lös
+        
+        
     def wumpus_stay_chance (self) :
-        if self.difficulty=='easy' :
-            return 0.9
-        if self.difficulty=='medium' :
-            return 0.3
-        if self.difficulty=='hard' :
-            return 0.2
-        else :
-            return 1
+        return self.difficulty_chance(0.9,0.3,0.2)
+
     def wumpus_move_chance (self) :
-        if self.difficulty == 'easy' :
-            return 0.2
-        if self.difficulty=='medium' :
-            return 0.7
-        if self.difficulty=='hard' :
-            return 0.3
-        else :
-            return 1
+        return self.difficulty_chance(0.2,0.7,0.3)        
+
     def wumpus_move_to_player_chance (self) :
-        if self.difficulty == 'easy' :
-            return 0.1
-        if self.difficulty=='medium' :
-            return 0.1
-        if self.difficulty=='hard' :
-            return 0.9
-        else :
-            return 1
+        return self.difficulty_chance(0.1,0.1,0.9)
     def sense_wumpus_radius(self) :
         return 1
     def shoot_length(self) :#jur långt kan jägaren skjuta, notera att det är rakt
-        #om det är 1 betyder det att han skjuter till och med rummet brevid
+        #om det är 1 betyder det att hen skjuter till och med rummet brevid
         return 2
+    def number_of_start_arrows(self) :
+        return self.difficulty_chance(9001,5,2)
+    
+    def number_of_pick_up_arrows(self) :
+        return self.difficulty_chance(420,3,1)

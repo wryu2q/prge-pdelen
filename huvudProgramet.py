@@ -160,11 +160,12 @@ def paint_wumpus () :
     x=wumpus.get_x()
     y=wumpus.get_y()
     pygame.draw.circle(main_screen,color,(x*60+30,y*60+30),25)
-def paint_hunter (hunter) :
+def paint_hunter () :
     x=hunter.get_x()
     y=hunter.get_y()
     pygame.draw.circle(main_screen,YELLOW,(x*60+30,y*60+30),25)
-    
+    if hunter.hunter_senses(*wumpus.get_xy()).count('wumpus') :
+        pygame.draw.circle(main_screen,RED,(x*60+30,y*60+30),10)
 
 def direction_to_text(direction):#gör om en mattematisk riktning till text, dvs upp,höger...
     if direction==0 :
@@ -181,7 +182,7 @@ def hunter_senses_text():#texten som skrivs när jägaren är brevid wumpus elle
     text_list=[]
     for sense in list(set(sense_list)) :#loop som går igenom alla unika element
         if sense=='wumpus' :
-            text_list.append('I feel the smell of Wumpus.')
+            text_list.append('I smell Wumpus.')
         elif sense =='hole' :
             text_list.append('I feel the wind of a bottomless pit.')
         elif sense=='bat' :
@@ -190,18 +191,16 @@ def hunter_senses_text():#texten som skrivs när jägaren är brevid wumpus elle
 
 def senses_text_box (x,y,width=350,height=150,color=BLUE_LIGHT):
     #message(x,y,font_size,text,font='comicsansms',color=BLACK,place_corner=False) 
-    
     font_size=20
     font='comicsansms'
     text_color=BLACK
-    space_between_text= 2
-    text_height=(font_size*4/3) + space_between_text
+    space_between_text= 2#mellanrummet mellan vraje rad
+    text_height=(font_size*4/3) + space_between_text#utrymmet var rad får(inka mellanrum)
     pygame.draw.rect(main_screen,color,(x,y,width,height))#ritar ruttan texten är på
-    turn =0#hur många gånger man skrivit en text
+    turn =0#hur många gånger man skrivit en text, så man kan räkna utrymme
     for text in hunter_senses_text() :
         message(x,y+turn*text_height,font_size,text,font,text_color,True)
         turn+=1
-         
 
 def hunter_buttons (x,y,mouse_click) :#knappar för spelet och triggar att wumpus ska röra sig
     #är tänkt att knapparna ska ligga som ett kors där skjut är i mitten och gå runt om
@@ -235,41 +234,36 @@ def hunter_buttons (x,y,mouse_click) :#knappar för spelet och triggar att wumpu
             direction=2
         if turn==4 :#man ska skjuta
             text='shoot'
-            if hunter.is_shooting() :#om han redan valt att skjuta
+            if hunter.is_shooting() or hunter.get_number_of_arrows()==0:#redan valt skjut/slut pil
                 impossible_action=True
-            else :#han har valt att skjuta
+            else :#hen har valt hen ska skjuta
                 action=hunter.shoot_toggle
                 action_argument=()
 
         elif turn%2 :# ska det finnas knapp rör dig knapp
-            if turn%2==1 :#om man är på en riktning knapp
-                text=direction_to_text(direction)
-                if hunter.get_possible_directions().count(direction) == 0 :#kan inte gå åt hållet
-                    impossible_action=True
-                elif hunter.is_shooting() :
-                    action=None
-                    action_argument=()
-                else :
-                    action=hunter.hunter_move
-                    action_argument=(direction,)    
-        else :
+            text=direction_to_text(direction)
+            if hunter.get_possible_directions().count(direction) == 0 :#kan inte gå åt hållet
+                impossible_action=True
+            elif hunter.is_shooting() :#om han dragit bågen ska han inte gå
+                action=None
+                action_argument=()
+            else :#annars ska han gå
+                action=hunter.hunter_move
+                action_argument=(direction,)    
+        else :#det är intgen knapp så inget ska ritas
             continue
         if impossible_action :# om det inte går blir knappen en textruta
             message_box(local_x,local_y,button_dimension,button_dimension,text,impossoble_action_color)
         else :
             got_click=text_button(local_x,local_y,button_dimension,button_dimension,text,color,active_color,action,action_argument,mouse_click)
             
-        if got_click and turn%2 :
-            if hunter.hunter_shoot(direction,*wumpus.get_xy()):#skjuter coh träffar
-                return 'win'
+        if got_click and turn%2:#han har valt att skjuta/gå och valt riktning
+            hunter.hunter_shoot(direction,*wumpus.get_xy())#skjuter, fnk tar hand om dragen pilar.. 
             end_turn=True
     if end_turn :#om man flytta sig eller skjuter
-        if hunter.got_killed(*wumpus.get_xy()) :#om man dör av wumpus eller hål
-            return 'dead'
         wumpus.wumpus_move(*hunter.get_xy()) #wumpus ska flytta sig 
-
-            
-
+        hunter.got_killed(*wumpus.get_xy())#vill se om han dog efter, annars svårt fly,kan gå genom
+        print(hunter.get_statistics_string())
 def taskbar(mouse_click):#funktionen som kör för att visa aktivitetsfältet i spelet
     #aktivitetsfältet blir 320x720 pixlar och ska nkludera knappar för vilket hål man ska gå till
     #och information om vad jägaren känner i omgivningen
@@ -280,18 +274,15 @@ def taskbar(mouse_click):#funktionen som kör för att visa aktivitetsfältet i 
     text_button(taskbar_left_edge+20,200,200,100,'wumpus go!',RED,RED_LIGHT,wumpus.wumpus_move,(hunter.get_xy()))#text för att se hur wumpus rör sig
     hunter_buttons(taskbar_left_edge+30,380,mouse_click)
     senses_text_box(taskbar_left_edge+20,20)
-    
 
     
 def run_game(new_difficulty='medium') :#kör spelet, börjar med att generera plan etc
     difficulty.change_difficulty(new_difficulty)
-    print(difficulty)
     matrix.create_maze()
-    
     night_vision=False
     show_wumpus=False
     wumpus.place_random_empty_room()
-    hunter.place_random_empty_room()
+    hunter.game_restart()
     while True :
         mouse_click=False
         for event in pygame.event.get() :
@@ -308,9 +299,12 @@ def run_game(new_difficulty='medium') :#kör spelet, börjar med att generera pl
         display_rooms(night_vision)
         if show_wumpus :
             paint_wumpus()
-        paint_hunter(hunter)
+        paint_hunter()
         taskbar(mouse_click)
         pygame.display.update()
+        if hunter.has_game_ended() == True :
+            print( hunter.cause_of_ended_game(*wumpus.get_xy()) )
+            show_wumpus,night_vision=True,True
         clock.tick(FPS)
     
 
@@ -338,7 +332,7 @@ matrix.set_difficulty(difficulty)
 wumpus=wumpusclasses.Wumpus(matrix,difficulty)
 hunter=wumpusclasses.Hunter(matrix,difficulty)
 
-run_game ('hard')
+run_game ('medium')
 
 
 
