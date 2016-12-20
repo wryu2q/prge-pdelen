@@ -323,13 +323,10 @@ class Wumpus(Character) :
     def wumpus_move (self,x_hunter=None,y_hunter=None):#wumpus flyttar ska sig
         possible_directions=self.get_possible_directions()
         if possible_directions==[]  :#om det iinte går att gå
-            print('wumpus got fucked')
             self.place_random_empty_room()
         elif random.random() <self.difficulty.wumpus_stay_chance() :#chansen att wumpus ska stanna
-            print('wumpus stay')
             return
         elif random.random()<self.difficulty.wumpus_move_chance()  : #wumpus ska röra sig random
-            print('wumpus random walk')
             direction=random.choice(possible_directions)#slumpar riktning
             self.wumpus_new_position(*self.matrix.get_direction_xy(self.x,self.y,direction))
             return
@@ -346,15 +343,13 @@ class Wumpus(Character) :
                     else :
                         direction=0
                 if possible_directions.count(direction)==0:#kollar om man kan gå åt hållet
-                    print(possible_directions,direction)
                     continue
                 else : #han ska gå
-                    print('wumpus hunt',possible_directions,direction)                    
+
                     self.wumpus_new_position(*self.matrix.get_direction_xy(self.x,self.y,direction))
                     return
             self.wumpus_move(x_hunter,y_hunter)#funka inte, pröva nytt alternativ 
         else:
-            print('wumpus confused')
             return
             
 class Hunter(Character) :#klass för jägaren med metoder för att röra sig och ststistik
@@ -383,7 +378,7 @@ class Hunter(Character) :#klass för jägaren med metoder för att röra sig och
     def hunter_new_position(self,x,y) :#
         self.x=x
         self.y=y
-        if self.matrix.call_object(x,y).room_visited() :
+        if not self.matrix.call_object(x,y).room_visited() :
             self.found_rooms+=1
         self.matrix.call_object(x,y).visit_room()
         if self.matrix.call_object(x,y).get_content()=='bat' :#om man går på fladder möss, flyg
@@ -443,9 +438,18 @@ class Hunter(Character) :#klass för jägaren med metoder för att röra sig och
         self.game_ended=True
         self.cause_of_end=cause
         return True
+    
     def get_statistics_string(self) :#ska ge divere statisk för att skriva ut
         return str('arrows:'+ str(self.arrows)+' moves:'+ str(self.moves)+ ' found rooms:'+ str(self.found_rooms))
-        
+
+    def get_statistics_list(self) :
+        return {'difficulty': self.difficulty.get_difficulty() ,
+                'moves':self.moves,
+                'found rooms':self.found_rooms,
+                'shots fired':self.shots_fired,
+                'name':None}
+                        
+                
     def has_game_ended (self):#har spelet tagit slut?
         return self.game_ended
 
@@ -468,7 +472,7 @@ class Difficulty (object) :#håller reda på svårighetsgrad och chanser
         return self.difficulty
         
     def get_difficulty(self) :
-        return  difficulty
+        return  self.difficulty
     def change_difficulty(self,new_difficulty) :
         self.difficulty=new_difficulty
     def set_room_multiplier (self) :#avgör hur många rum det ska vara beroende på svårighetsgrad
@@ -523,7 +527,7 @@ class Difficulty (object) :#håller reda på svårighetsgrad och chanser
         #om det är 1 betyder det att hen skjuter till och med rummet brevid
         return 2
     def number_of_start_arrows(self) :
-        return self.difficulty_chance(9001,5,2)
+        return self.difficulty_chance(420,5,2)
     
     def number_of_pick_up_arrows(self) :
         return self.difficulty_chance(420,3,1)
