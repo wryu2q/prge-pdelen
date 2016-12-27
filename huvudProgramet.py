@@ -1,5 +1,7 @@
-import pygame, sys, time, random, pickle, shelve, math
+import pygame, sys,shelve
 import wumpusclasses
+import pygame_textinput #modul från en cool snubbe på github som kallas NSasquatch
+
 
 #kommande raderna beskriver grundlägande saker för pygame
 
@@ -29,12 +31,12 @@ BLUE_DARK   =(0,0,150)
 SCREEN_SIZE= SCREEN_WIDTH,SCREEN_HEIGHT=(1280,720) #tuple/konstanter för fönstrets dimensionering
 main_screen= pygame.display.set_mode(SCREEN_SIZE) #skapar skärmen som man ritar på
 BOARD_WIDTH,BOARD_HEIGHT=15,12 #antalet rutor spelplanen har
+BOARD_SQUARE_WIDTH,BOARD_SQUARE_HEIGHT=60,60
 pygame.display.set_caption('Wumpus')
 
-#nedan beskrivs generella funktioner for pygame så som att rita en text eller att göra en knapp
 #genelt så skrivs funktionerna med argumenten i ordningen
 #x kordinat, y kordinat, bredden, höjden för det som ritas på skärmen
-#notera att i pygame beskrivs oftast kordinaten för något med det som är högst up till vänster
+#notera att i pygame beskrivs oftast kordinaten för något med punkten som är högst up till vänster
 
 def message(x,y,font_size,text,font='comicsansms',color=BLACK,place_corner=False) :#ritar ett text
     #medelande på main_screen, notera att x,y är i mitten av texten om inte place_corner är True
@@ -46,61 +48,71 @@ def message(x,y,font_size,text,font='comicsansms',color=BLACK,place_corner=False
     else:
         text_rect.center=(x,y)
     main_screen.blit(text_surface_object,text_rect)
+    
 def message_box(x,y,width,height,text,color,font=None,text_color=BLACK) :#ritar en ruta på
     #main_screen med en text på
     pygame.draw.rect(main_screen,color,(x,y,width,height))#ritar rektangeln
-    #nedan kommer min gissning på lagom fontstorlek så att texten inte kommer utanför
-    #gissat via try and error så den är inte perfekt
+    #nedan kommer min gissning på lagom fontstorlek så att texten inte kommer utanför rutan
     font_height=int(height/2)#gissning på fontsize avseende på höjd
     font_width=int(2*width/len(text))#gissnig på storlek avseende på brädd
-    if font_height < font_width :
+    if font_height < font_width : #val av om vilken begränsning av texten som ska användas
         font_size=font_height
     else :
         font_size=font_width
     message(x+width/2, y+height/2, font_size, text, font,text_color)#ritar texten på knappen
+    
 def text_button(x,y,width,height,text,color,active_color,action=None,action_arguments=(),mouse_click=None) :
     #funktionen ritar en rektangulär knapp på main_screen
     #active_color syftar på när musen är på knappen
     #action är funktionen man vill köra när man trycker på knappen
     #action_arguments är en tuple av dom argument som action ska ha
+    #mouse_click är om musknappen trycks(funkar utan men i sådana fall kan man stöta på problemet
+    #att det är helatiden när musen är nere, man kansek bara vill ha på realese)
     mouse_coordinates=pygame.mouse.get_pos()#ger x,y för musen
     if mouse_click==None :
         mouse_click=pygame.mouse.get_pressed()[0]#avgör om vänsterclick är nere
-    else :
-        mouse_click=mouse_click#tar in om musen ska klickas
-    if x+width> mouse_coordinates[0] >x and y+height> mouse_coordinates[1] >y:#musen på knappen
-        message_box(x,y,width,height,text,active_color)#ritar ruta med nyans när mus är höver
-        if mouse_click==True and action !=None :#om man klickar på knappen, borde vara på relsea
-            action (*action_arguments) #nu körs funktionen
-        if mouse_click==True :
-            return True #så man vet att en knapp är tryckt
+
+    if x+width> mouse_coordinates[0] >x and y+height> mouse_coordinates[1] >y:#är musen på knappen?
+        message_box(x,y,width,height,text,active_color)#ritar ruta med nyans när mus är över
+        if mouse_click==True :#om man klickar på knappen
+            if action !=None :#om det inte finns nån funktion ska inget köras
+                action (*action_arguments) #nu körs funktionen
+            return True #så man vet att en knapp är tryckts
     else:
         message_box(x,y,width,height,text,color)
-def close(state=None) :#stänger hela programet med eventuel funktion när det stängs
+        
+def close_game(state=None) :#stänger hela programet med eventuel funktion när det stängs
     #state syftar på vad som ska hända när programet stäng exempelvis kan ett medelande duka upp
     pygame.quit() #stänger pygame modulen
     sys.exit() #stänger programet
 
+    
 #nedon kommer logik om själva spelet och spelplanen
 
-#matrisen för spelplanen har x,y numrering som en matte matris fast med 00 uppe i högra hörnet
+#mycket sparas i object på heapen, för att se alla object som skapas, se dom sista raderna i koden
 
-#nedan kommer lite logic för att generera rummen och visa dom
-#tanken bakom rummen är att dom ska hålla sig inom en BOARD_WIDTH x BOARD_HEIGHT matris där alla rutor är rum
-#och rummen är 60x60 pixlar. rummen slumpas där ett rum kan ha 4-1 in/utgångar och varje
-#rum kan ha ett inehåll så som hål eller flygande råttor.
+#spelplanen genereras med hjälp av filen wumpusclasses.py som har massa klasser för att generera
+#laburinter och hur det görs med rum etc, myckes förlitas på heapen och många klasser tar in object
+#från andra klasser. Se wumpusclasses.py för hur det funkar och vilka metoder som kallas på
+
+#rummen är 60x60 pixlar. rummen slumpas där ett rum kan ha 4-1 in/utgångar och varje
+#rum kan ha ett inehåll så som hål eller flygande råttor eller pilar.
 
 #generelt sätt skrivs riktningarna i ordningen med upp först och sedan som klockan om det
 #ska inkludera siffror så blir upp 0 och sedan ökar det med 1 i ordningen ovan
 
-def paint_room(x,y,directions,content=None,near_content=()) :#ritar ett rum beroende på ienhåll och riktningarna
-    #som det finns gångar. ritas vid x,y är kordinaten för rummet
-    #rummet är 60X60 pixlar
+def paint_room(x,y,directions,content=None,near_content=()) :#ritar ett rum beroende på ienhåll och
+    #riktningarna. ritas vid x,y är kordinaten för rummet
+    #rummet förväntas vara 60X60 men där det är möjligt används konstanterna för höjd/bredd
     #diections or en lista eller tupple som beskriver alla riktningarna från rummet
-    #content är innehåll
-    #rummet blir en cirkel med rktanglar som sticker ut
+    #content är innehållet i rummet
+    
+    #rummet ritas som en cirkel med rektanglar som sticker ut, rummets färg beror på närliggande
+    #inehåll och inehållet i rummet
 
-    #tänk för i helvette på att inte ha samma ska 2 gånger så att vi inte gör om misstaget
+
+#kodupprepning?
+    #nedan är if komandom om vilken förg det ska vara beroende på närliggande grejer
     if near_content.count('hole') and near_content.count('bat') :
         color=BLUE_DARK
     elif near_content.count('hole') :
@@ -109,67 +121,100 @@ def paint_room(x,y,directions,content=None,near_content=()) :#ritar ett rum bero
         color=BLUE
     else:
         color=GREY
-    radius=20
-    hole_radius=10
-    path_width=20
-    pygame.draw.rect(main_screen,BLACK,(x,y,60,60)) #ritar svart ruta som bakgrund
-    pygame.draw.circle(main_screen,color,(x+30,y+30),radius)
+    radius=20#radien för cirkeln som ritas
+    hole_radius=10#radien för hål
+    path_width=20#brädden för varje gång
+    pygame.draw.rect(main_screen,BLACK,(x,y,BOARD_SQUARE_WIDTH,BOARD_SQUARE_HEIGHT))#ritar svart bakgrund
+
     #obs semikodupprepning
-    for direction in directions :
-        #koduprepning?
-        if direction == 0 :#ritar uppåt väg
-            pygame.draw.rect(main_screen,color,(x+30-path_width/2,y,path_width,30))
-        elif direction==1 :#ritar åt höger 
-            pygame.draw.rect(main_screen,color,(x+30,y+30-path_width/2,30,path_width))
-        elif direction==2 :#ritar ner
-            pygame.draw.rect(main_screen,color,(x+30-path_width/2,y+30,path_width,30))
-        else : #ritar åt vänster
-            pygame.draw.rect(main_screen,color,(x,y+30-path_width/2,30,path_width))
+    for direction in directions :#går igenom alla gångars riktningar som ska ritas
+#kodupprepning?
+        
+        if not direction%2 :#riktningen är vertical dvs gången går upp eller ner
+            path_x=x+(BOARD_SQUARE_WIDTH-path_width)/2#avgör vart rutans x ska ritas
+            path_y=y#avgör var rutans y ska ritas
+            if direction==2 :#om det är ner så måste man lägga till lite på y
+                path_y +=BOARD_SQUARE_HEIGHT/2
+            rect_width=path_width#bredden på rektangeln som ritas
+            rect_height=BOARD_SQUARE_HEIGHT/2#höjden på rektangeln som ritas
+        else :#när det är verticalt, typ samma men annan konstant och bytta roller på x/y
+            path_y=y+(BOARD_SQUARE_HEIGHT-path_width)/2
+            path_x=x
+            if direction==1 :
+                path_x +=BOARD_SQUARE_WIDTH/2
+
+            rect_width=BOARD_SQUARE_WIDTH/2
+            rect_height=path_width
+            
+        pygame.draw.rect(main_screen,color,(path_x,path_y,rect_width,rect_height))
+    
+    pygame.draw.circle(main_screen,color,(int(x+BOARD_SQUARE_WIDTH/2),int(y+BOARD_SQUARE_HEIGHT/2)),radius)#ritar cirkeln i mitten    
     if content=='hole' :#om det finns ett hål
-        pygame.draw.circle(main_screen,BLACK,(x+30,y+30),hole_radius)
-    elif content=='bat' :#om det finn fladdermöss, ritan nån fladdermus grej
+        pygame.draw.circle(main_screen,BLACK,(int(x+BOARD_SQUARE_WIDTH/2),int(y+BOARD_SQUARE_HEIGHT/2)),hole_radius)
+    elif content=='bat' :#om det finns fladdermöss, ritan nån fladdermus grej
         pygame.draw.polygon(main_screen,BLUE_LIGHT,((x+30,y+30),(x+40,y+20),(x+50,y+30),(x+30,y+40),(x+10,y+30),(x+20,y+20)))
-    elif content=='arrows' :
+    elif content=='arrows' :#om det finns pilar
         pygame.draw.rect(main_screen,RED_DARK,(x+15,y+25,30,10))
         
-def display_rooms(night_vision=False):#funktion som går igenom matrisen för alla slumpade rum och ritar planen
+def display_rooms(night_vision=False):#funktion som går igenom matrisen för alla slumpade rum och
+    #ritar planen
+    
     #om ett rum inte ska visas eftersom det är obesökt eller det står None i matrisen så
     #ritas en svart ruta eller liknande
 
-    #om rummet är besökt ska det ritas en bild
-    #bilden jag tänkt mig ska ritas är den cirkel, cirkeln ska få rektanglar åt alla hål som det
-    #finns gångar, det är möjligt att jag snyggar till det senare
-    #för att visa inehållet ritar jag något extra,  typ svart ring för hål etc
+    #om rummet är besökt ska det ritas en bild, som ritas med paint_room
 
-    #jägaren och Wumpus ritas separat
     for x in range(BOARD_WIDTH) :
         for y in range(BOARD_HEIGHT) :
+            draw_x=x*BOARD_SQUARE_WIDTH
+            draw_y=y*BOARD_SQUARE_HEIGHT
             if matrix.call_object(x,y)==None or not(matrix.call_object(x,y).room_visited() or night_vision) :
-                pygame.draw.rect(main_screen,BLACK,(x*60,y*60,60,60))#ritar svart ruta
-            else:
+                #ritar en svart ruta
+                pygame.draw.rect(main_screen,BLACK,(draw_x,draw_y,BOARD_SQUARE_WIDTH,BOARD_SQUARE_HEIGHT))
+            else:#om det ska ritas ett rumm
                 path_directions=(matrix.call_object(x,y)).path_directions()
                 content=(matrix.call_object(x,y)).get_content()
                 
                 near_content=matrix.get_near_content(x,y)
-                paint_room(x*60,y*60,path_directions,content,near_content)
-
+                paint_room(draw_x,draw_y,path_directions,content,near_content)
+    
                 
 
-#kommer använda mig utav klasser för att få karaktärernas x,y samt svårighetsgrad 
+#nedan ritas wumpus och jägaren, båda tar hjälp av des lämpade objekt på heapen och ritar sedan
 
-def paint_wumpus () :
-    color=RED
-    x=wumpus.get_x()
-    y=wumpus.get_y()
-    pygame.draw.circle(main_screen,color,(x*60+30,y*60+30),25)
-def paint_hunter () :
-    x=hunter.get_x()
-    y=hunter.get_y()
-    pygame.draw.circle(main_screen,YELLOW,(x*60+30,y*60+30),25)
-    if hunter.hunter_senses(*wumpus.get_xy()).count('wumpus') :
-        pygame.draw.circle(main_screen,RED,(x*60+30,y*60+30),10)
+def paint_wumpus () :#funktion som ritar Wumpus
+    #tänket bakom funktionen är helt enkelt att rita en importerad bild på rätt plats
+    x=BOARD_SQUARE_WIDTH*wumpus.get_x()#tar objektet wumpus x och formulerar vart det ska ritas
+    y=BOARD_SQUARE_HEIGHT*wumpus.get_y()
+    wumpus_pic=pygame.image.load('wumpus.png')#bilden på wumpus som är 60x60
+    main_screen.blit(wumpus_pic,(x,y))
+    
+def paint_hunter () :#funktionen som ritar jägaren
+    #jägaren kommer ritas som en circel med en bild på en pilbåge på, när man drar bågen används
+    #en annan bild, cirkeln ska ändra färg när wumpus är nära
+    #hunter är ett object för jägaren som har metorder som ankallas, se wumpusclasses
+    x=BOARD_SQUARE_WIDTH*hunter.get_x()
+    y=BOARD_SQUARE_HEIGHT*hunter.get_y()
+    radius=10#radien för cirkeln som markerar jägaren 
+    circle_thickness=0#cirkelns tjocklek (noll betyder fylld)
+    wumpus_close_color=RED#färgen på cirkeln när wumpus är nära
+    not_close_color=YELLOW#förgen när wumpus inte är nära
+    if hunter.hunter_senses(*wumpus.get_xy()).count('wumpus') :#wumpus är nära
+        color=wumpus_close_color#färgen som cirkeln får
+    else :
+        color=not_close_color
+        
+    if hunter.is_shooting():#är bågen dragen, ta då bilden när den är dragen, ta annars den andra
+        bow_pic=pygame.image.load('bow_drawn.png')
+    else :
+        bow_pic=pygame.image.load('bow.png')
+    pygame.draw.circle(main_screen,color,(int(x+BOARD_SQUARE_WIDTH/2),int(y+BOARD_SQUARE_HEIGHT/2)),radius,circle_thickness)#ritar cirkeln som representerar jägaren 
+    main_screen.blit(bow_pic,(x,y))#ritar bilden på pilgågen
+    
 
 def direction_to_text(direction):#gör om en mattematisk riktning till text, dvs upp,höger...
+    #ganska självklart vilken riktning som ska vart man bör ha lärt sig ordningen
+    #den begärda riktningen returneras sedan i textformat som string
     if direction==0 :
         return 'up'
     elif direction==1 :
@@ -180,6 +225,7 @@ def direction_to_text(direction):#gör om en mattematisk riktning till text, dvs
         return 'left'
 
 def hunter_senses_text():#texten som skrivs när jägaren är brevid wumpus eller hinder
+    #skulle lika gärna kunna vare en metod -_-
     sense_list=hunter.hunter_senses(*wumpus.get_xy())
     text_list=[]
     for sense in list(set(sense_list)) :#loop som går igenom alla unika element
@@ -191,37 +237,39 @@ def hunter_senses_text():#texten som skrivs när jägaren är brevid wumpus elle
             text_list.append('I hear the sound of flying rats.')
     return text_list
 
-def senses_text_box (x,y,width=350,height=120,color=BLUE_LIGHT):
-    #message(x,y,font_size,text,font='comicsansms',color=BLACK,place_corner=False)
-    
-    font_size=20
-    font='comicsansms'
-    text_color=BLACK
+def senses_text_box (x,y,width=350,height=120,color=BLUE_LIGHT):#ritar rutan där texten om nära
+    #hinder och statistik dycker upp
+    #color är färgen på rutan
+    font_size=20#storleken på texten
+    font='comicsansms'#textens forn
+    text_color=BLACK#färgen på texten
     space_between_text= 2#mellanrummet mellan vraje rad
-    text_height=(font_size*4/3) + space_between_text#utrymmet var rad får(inka mellanrum)
+    text_height=font_size + space_between_text#utrymmet var rad får(inka mellanrum)
     pygame.draw.rect(main_screen,color,(x,y,width,height))#ritar ruttan texten är på
     turn =0#hur många gånger man skrivit en text, så man kan räkna utrymme
-    for text in (hunter.get_statistics_string(),*hunter_senses_text()) :
-        message(x,y+turn*text_height,font_size,text,font,text_color,True)
+    for text in (hunter.get_statistics_string(),*hunter_senses_text()) :#texten som ska skrivas
+        message(x,y+turn*text_height,font_size,text,font,text_color,True)#ritar text
         turn+=1
 
 def hunter_move_by_input(direction=None,toggle_shoot=False):#jägaren rör sig eller skjuter av input
-    #notera att den kör i en loop så den kör om och om igen 30 gånger i sekunden
+    #notera att den körs i en loop så den kör om och om igen 30 gånger i sekunden
 
-    if toggle_shoot :
+    if toggle_shoot :#ska han dra bågen/sluta dra bågen
         hunter.shoot_toggle()
-    elif direction != None and hunter.get_possible_directions().count(direction) == 1 :
-        if  hunter.is_shooting():
-            hunter.hunter_shoot(direction,*wumpus.get_xy())#skjuter och träffar
-        else :
+    elif hunter.get_possible_directions().count(direction) == 1 :
+        #om han inte ska har spelaren valt en riktning som går att ta
+        if  hunter.is_shooting()  :#han skjuter om bågen dragits
+            hunter.hunter_shoot(direction,*wumpus.get_xy())#skjuter
+        else :#annars flyttars han 
             hunter.hunter_move(direction)
-            wumpus.wumpus_move(*hunter.get_xy())
-            hunter.got_killed(*wumpus.get_xy())
+        #efter att jägaren skjutit eller gått så går wumpus
+        wumpus.wumpus_move(*hunter.get_xy())
+        hunter.got_killed(*wumpus.get_xy())
 
         
         
 def hunter_buttons (x,y,mouse_click) :#knappar för spelet och triggar att wumpus ska röra sig
-    #är tänkt att knapparna ska ligga som ett kors där skjut är i mitten och gå runt om
+    #är tänkt att knapparna ska ligga som ett kors där skjut är i mitten och gåriktningar runt om
     button_dimension =100 #bredd och höjd på var knapp
     between_space=10#rummet mellan alla knappar
     #nedan beskrivs koordinaten för knapparnas kollektiva övre vänstra hörn dvs det är ingen knapp
@@ -236,8 +284,8 @@ def hunter_buttons (x,y,mouse_click) :#knappar för spelet och triggar att wumpu
     #och en funktion
     mouse_click=mouse_click#avgör om musen är tryckt
     for turn in range(9) :#man går från vänster till höger upp till ner
-        impossible_action=False
-        got_click=False
+        impossible_action=False#om man inte kan trycka på knappen för att tex ingen gång går åt dit
+        got_click=False#om knappen blev tryckt blir den True
         local_x=(turn%3)*(button_dimension + between_space)+collective_corner_x
         local_y=int(turn/3)*(button_dimension + between_space)+collective_corner_y  
         if turn ==1: #turn gör i ordnigen upp,V,H,N så jag hårdkådar riktning...gör matte va fan!!!
@@ -248,9 +296,9 @@ def hunter_buttons (x,y,mouse_click) :#knappar för spelet och triggar att wumpu
             direction=1
         elif turn ==7 :
             direction=2
-        if turn==4 :#man ska skjuta
+        if turn==4 :#knappen för att man ska skjuta
             text='shoot'
-            if hunter.is_shooting() or hunter.get_number_of_arrows()==0:#redan valt skjut/slut pil
+            if hunter.get_number_of_arrows()<=0:#slut på pilar
                 impossible_action=True
         elif turn%2 :# ska det finnas knapp rör dig knapp
             text=direction_to_text(direction)
@@ -261,46 +309,50 @@ def hunter_buttons (x,y,mouse_click) :#knappar för spelet och triggar att wumpu
         
         if impossible_action :# om det inte går blir knappen en textruta
             message_box(local_x,local_y,button_dimension,button_dimension,text,impossoble_action_color)
-        else :
+        else :#annars kan man trycka den och och om den tryck ska got_click bli True
             got_click=text_button(local_x,local_y,button_dimension,button_dimension,text,color,active_color,mouse_click=mouse_click)
             
         if got_click and turn%2:#han har valt att skjuta/gå och valt riktning
             hunter_move_by_input(direction)
-        elif got_click and turn==4: #han väljer att skjuta
+        elif got_click and turn==4: #han väljer att dra/släppa bågen
             hunter_move_by_input(toggle_shoot=True)
         
 def taskbar(mouse_click):#funktionen som kör för att visa aktivitetsfältet i spelet
-    #aktivitetsfältet blir 320x720 pixlar och ska nkludera knappar för vilket hål man ska gå till
-    #och information om vad jägaren känner i omgivningen
-    taskbar_width=SCREEN_WIDTH-BOARD_WIDTH*60
-    taskbar_left_edge=SCREEN_WIDTH-taskbar_width
-    pygame.draw.rect(main_screen,GREEN,(taskbar_left_edge,0,taskbar_width,SCREEN_WIDTH))
-    #x,y,width,height,text,color,active_color,action=None,action_arguments=()) :
-    #text_button(taskbar_left_edge+20,200,200,100,'wumpus go!',RED,RED_LIGHT,wumpus.wumpus_move,(hunter.get_xy()))#text för att se hur wumpus rör sig
-    hunter_buttons(taskbar_left_edge+30,380,mouse_click)
-    senses_text_box(taskbar_left_edge+20,20)#skrever det jägaren känner i omgivningen
+    #aktivitetsfältet förväntas bli 320x720 pixlar och ska inkludera knappar för vilket hål man
+    #ska gå till och information om vad jägaren känner i omgivningen
+    #inputen mouse_click är om musen trycks
+    taskbar_width=SCREEN_WIDTH-BOARD_WIDTH*BOARD_SQUARE_WIDTH#bredden på menyn
+    taskbar_left_edge=SCREEN_WIDTH-taskbar_width#vänsterkanten för menyn
+    pygame.draw.rect(main_screen,GREEN,(taskbar_left_edge,0,taskbar_width,SCREEN_WIDTH))#ritar fält
+    if not hunter.has_game_ended() :#ritar knaparna för att gå om inte spelet slutat
+        hunter_buttons(taskbar_left_edge+30,380,mouse_click)
+    senses_text_box(taskbar_left_edge+20,20)#skriver det jägaren känner i omgivningen
     if True == text_button(taskbar_left_edge+10,150,300,100,'main menu',RED,RED_LIGHT) :
-        return 'main menu'
+        #knapp som trycks när man vill tillbaks till huvudmenyn
+        return 'main menu'#returnerar att man vill tillbaks till huvudmenyn
     
 def run_game(new_difficulty='medium') :#kör spelet, börjar med att generera plan etc
-    difficulty.change_difficulty(new_difficulty)
-    matrix.create_maze()
-    night_vision=False
-    show_wumpus=False
-    wumpus.place_random_empty_room()
-    hunter.game_restart()
-    while True :
-        mouse_click=False
-        for event in pygame.event.get() :
-            if event.type== pygame.QUIT :
-                close ()
-            if event.type == pygame.MOUSEBUTTONDOWN:
+    difficulty.change_difficulty(new_difficulty)#man byter svårighetgraden
+    matrix.create_maze()#genererar ny laburint
+    night_vision=False#om man vill se alla rum på kartan 
+    show_wumpus=False#om man ska visa wumpus, i normalfallet ska man inte se honom
+    wumpus.place_random_empty_room()#placerar wumpus
+    hunter.game_restart()#placerar jägaren och nolstäler statistik
+    while True :#huvudloop som körs tills spelet slutar
+        mouse_click=False#man förutsätter att musen inte tryckts, den kan ändras senare
+        events=pygame.event.get()#lista på alla event från användaren typ knaptryck musen flytas etc
+        for event in events :
+            if event.type== pygame.QUIT :#om man väljer att stänga programet
+                close_game ()
+            if event.type == pygame.MOUSEBUTTONDOWN:#om man clickar med en musknapp
                 mouse_click=True
-            if event.type == pygame.KEYDOWN :
-                if event.key==pygame.K_n :
+            if event.type == pygame.KEYDOWN and not hunter.has_game_ended():#knappar tryckningar
+                #för användraval i spelet
+                if event.key==pygame.K_n :#man vill se/sluta se hela kartan
                     night_vision=not night_vision
-                if event.key==pygame.K_m :
+                if event.key==pygame.K_m :#man vill se/sluta se wumpus
                     show_wumpus=not show_wumpus
+                #nedan beskrivs piltangenter och vart dom leder
                 if event.key==pygame.K_w or event.key==pygame.K_UP :
                     hunter_move_by_input(0)
                 if event.key==pygame.K_d or event.key==pygame.K_RIGHT :
@@ -309,28 +361,34 @@ def run_game(new_difficulty='medium') :#kör spelet, börjar med att generera pl
                     hunter_move_by_input(2)
                 if event.key==pygame.K_a or event.key==pygame.K_LEFT :
                     hunter_move_by_input(3)
-                if event.key==pygame.K_SPACE :
+                if event.key==pygame.K_SPACE :#space för att dra bågen
                     hunter_move_by_input(toggle_shoot=True)
 
-        main_screen.fill(WHITE)
-        display_rooms(night_vision)
-        if show_wumpus :
+        display_rooms(night_vision)#ritar alla rum
+        if show_wumpus :#ritar wumpus om han ska ritas
             paint_wumpus()
-        paint_hunter()
-        taskbar_return=taskbar(mouse_click)
-        if taskbar_return =='main menu' :
+        paint_hunter()#ritar jägaren
+        taskbar_return=taskbar(mouse_click)#ritar aktivitetsfältet och ser vad som returneras
+        if taskbar_return =='main menu' :#om man valt att gå till huvudmenyn från aktivitetsfältet
             break
-        if  hunter.has_game_ended() :
-            win_screen()
+        if  hunter.has_game_ended() :#om spelet slutat via vinst eller förlust
+            if win_screen(events) == 'quit':#kör funktionen för när spelat slutar
+                break
+        print(events)#spelar man och vinner flera gånger kommer den printa sista gamal eventet också, fast bara när man vunnit så inget gamalt när man spelar WTF!!!! 
         pygame.display.update()
-
         clock.tick(FPS)
-    
 
 #nedan kommer massa info om sidor annat än spelsidan
-def win_screen () :#funktionen som dyker upp när man vunnit och ska skriva sitt namn
+def win_screen (events=[]) :#funktionen som dyker upp när man vunnit och ska skriva sitt namn
+    #om man inte vunnit står det bara en text om hur man dog
     cause_of_end=hunter.cause_of_ended_game(*wumpus.get_xy())
-    if cause_of_end == 'win' :
+    enter_name_x,enter_name_y=410,410#x,y för rutan man fyller i namn
+    enter_name_width,enter_name_height=400,50#dimensioner för rutan man fyller i namn på
+    enter_name_text_color=RED #färgen på texten när man skriver sitt namn
+    enter_name_text='enter name:'#texten i rutan där man ska skrva sitt namn
+    enter_name_font_size=35#måste vara 35 anars måste man ändra text_input vilket värkara vara meck
+    text_input.set_text_color(enter_name_text_color)
+    if cause_of_end == 'win' :#ritar text på skärmen där det står hur spelet sluta
         text='ya win'
     elif cause_of_end  == 'wumpus' :
         text='wumpus killed you'
@@ -338,48 +396,46 @@ def win_screen () :#funktionen som dyker upp när man vunnit och ska skriva sitt
         text='you fell into a pit'
     else :
         text='error 404 kill not found'
-
-    #message(x,y,font_size,text,font='comicsansms',color=BLACK,place_corner=False)
-    message(SCREEN_WIDTH/2,SCREEN_HEIGHT/2,100,text,'arial',RED)
-    if cause_of_end=='win' :
-        name=input('enter name:')
-        save_score(name)
-        
-    #det finns möjlighet att jag importerar en modul för text input i pygame, annars får den köras
-    #sominput i kommandotolken
-
-
-
+    message(SCREEN_WIDTH/2,SCREEN_HEIGHT/2,100,text,'arial',RED)#ritar slutmedelandet
     
-def save_score(name='null') :#funktionen som kör när man ska spara spelerens highscore i det
-    #separata dokumentet
-    player_score=hunter.get_statistics_list()
-    player_score['name']=name#tabellen med all statistik
+    if cause_of_end=='win' :#om man vunnit och ska skriva namn
+        pygame.draw.rect(main_screen,WHITE,(enter_name_x,enter_name_y,enter_name_width,enter_name_height))#rutan som namnet skrivs på
+        message(enter_name_x+10,enter_name_y+10,enter_name_font_size,enter_name_text,None,enter_name_text_color,True)#inledande medelandet till input
+        #print(events)#ger märkliga utslag när man vunit flera gånger
+        if text_input.update(pygame.event.get()) and text_input.get_text()!='':#om man tryckt enter
+            #och man har skrivit nått
+            #vet att raden ovan borde ta in events men de är en bugg som sådan :
+            #när man skriver nått första gången är det bra men andra gången så sparas det sista eventet som gjrodes från förra gången, alltså blir det som om enter är nedtryckt konstant nästa gång man skriver, detta beror på inputen man får från run_game men blir fuckad fast bara när spelet slutat 
+            name=text_input.get_text()
+            save_score(name)
+            text_input.input_string=''#man ska nollstålla text för nästa gång
+            return 'quit'
+        main_screen.blit(text_input.get_surface(),(int(enter_name_x+len(enter_name_text)*enter_name_font_size/2.5),enter_name_y+10))#ritar den skrivna inputsttexten
+        
+    
+def save_score(name='null') :#funktionen som kör när man ska spara spelerens highscore i dokumentet
+    player_score=hunter.get_statistics_list()#tar den info om vad spelaren åstakom och bildar tabell
+    player_score['name']=name#tabellen med all statistik får nu ett namn i tabellen
     wumpus_scores=shelve.open('wumpus_scores.dat','w',writeback=True)
     wumpus_scores[('statistics_'+ hunter.difficulty.get_difficulty())].append(player_score)
+    #man sparar genom att lägga till det senaste player_score i den shelve som har lämplig svårihet
     wumpus_scores.close()
-
-    #nedan är bara test
-    wumpus_scores=shelve.open('wumpus_scores.dat','r')
-    print(wumpus_scores['statistics_'+ hunter.difficulty.get_difficulty()])
-    wumpus_scores.close()
-
 
 def high_score_screen():#funktionen som körs när man ska se föregående spelares high score
     button_collective_corner_x,button_collective_corner_y=10,200
     button_height=100#hur höga ska knapparna vara
     button_width=100#bredden på knapparna
     button_space=20
-    
+
     
     rect_height=600#hur höga ska  vara rektanglarna vara
     rect_width=400#bredden på rektnaglarna
-    rect_space=20#mellanrumet mellan knapparna
+    rect_space=20#mellanrumet mellan rektanglarna
     collective_corner_x,collective_corner_y=10,200#första knappens hörn
     header_size=50
     turn=0
     wumpus_file =shelve.open("wumpus_scores.dat","r")
-    index='name'
+    index='moves'
     greatest_to_smallest=False
     list_font_size=12
     list_font='ubuntumono'
@@ -400,16 +456,14 @@ def high_score_screen():#funktionen som körs när man ska se föregående spela
         sorted_score_list=sort_dict_by_index(wumpus_file['statistics_'+difficulty],index,greatest_to_smallest)
         score_board_turn=0
         for singel_score in sorted_score_list :#loppen som ritar varje omgång, bildar först en text
-            printed_text=(' %2d'%(score_board_turn+1))+('.name:%10s' %singel_score['name'])+('   moves:%3d'%singel_score['moves'])+('   found rooms:%3d' %singel_score['found rooms']) +('   shots:%3d' %singel_score['shots fired'])
+            printed_text=(' %2d'%(score_board_turn+1))+('.name:%10.10s' %singel_score['name'])+('   moves:%3d'%singel_score['moves'])+('   found rooms:%3d' %singel_score['found rooms']) +('   shots:%3d' %singel_score['shots fired'])
             message(local_x,local_y+header_size+score_board_turn*list_font_size,list_font_size,printed_text,list_font,place_corner=True)
             score_board_turn+=1
-            #print(printed_text)
-
         
         turn+=1
     #message(x,y,font_size,text,font='comicsansms',color=BLACK,place_corner=False)
     wumpus_file.close()
-
+    
 def sort_dict_by_index(sort_list,index,greatest_to_smallest=True):#sorterar en lista beroende på
     #ett index och om den sk sorteras uppifrån och ner
     new_list=sorted(sort_list,key=lambda  k: k[index])
@@ -469,7 +523,7 @@ def main_menu() :#huvudmenyn som ska köra när spelet startar
         mouse_click=False
         for event in pygame.event.get() :
             if event.type == pygame.QUIT :
-                close()
+                close_game()
             if event.type == pygame.MOUSEBUTTONDOWN:
                 mouse_click=True
         #nedan kommer kodupprepning från annan game_mode_menu_screen
@@ -523,6 +577,7 @@ difficulty=wumpusclasses.Difficulty()#alla behöver ha difficulty för att räkn
 matrix.set_difficulty(difficulty)
 wumpus=wumpusclasses.Wumpus(matrix,difficulty)
 hunter=wumpusclasses.Hunter(matrix,difficulty)
+text_input=pygame_textinput.TextInput()
 
 
 does_score_file_exist()

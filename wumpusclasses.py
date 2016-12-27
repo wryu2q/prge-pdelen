@@ -1,4 +1,7 @@
-#nedan kommer klasserna
+#denna fil inehåller alla klasser som gjort för spelet wumpus
+
+
+
 import math,random
 
 class Room (object) :
@@ -414,7 +417,7 @@ class Hunter(Character) :#klass för jägaren med metoder för att röra sig och
         #skjuter rakt, annars blir det för lätt eftersom grafiken är som den är
         shoot_length=self.difficulty.shoot_length()#hur långt kan hen skjuta
 
-        if self.shoot == True :
+        if self.shoot == True and self.arrows>0:
             self.shoot_toggle ()
             self.arrows-=1
             self.shots_fired+=1
@@ -436,7 +439,8 @@ class Hunter(Character) :#klass för jägaren med metoder för att röra sig och
     
     def dead(self,cause='wumpus') :#kallas på om han blir dödad
         self.game_ended=True
-        self.cause_of_end=cause
+        if self.cause_of_end != 'win' :
+            self.cause_of_end=cause
         return True
     
     def get_statistics_string(self) :#ska ge divere statisk för att skriva ut
@@ -514,10 +518,10 @@ class Difficulty (object) :#håller reda på svårighetsgrad och chanser
         
         
     def wumpus_stay_chance (self) :
-        return self.difficulty_chance(0.9,0.3,0.2)
+        return self.difficulty_chance(0.9,0.3,0.01)
 
     def wumpus_move_chance (self) :
-        return self.difficulty_chance(0.2,0.7,0.3)        
+        return self.difficulty_chance(0.2,0.7,0.2)        
 
     def wumpus_move_to_player_chance (self) :
         return self.difficulty_chance(0.1,0.1,0.9)
