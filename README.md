@@ -9,7 +9,9 @@ för att köra spelet så måste man först och främst instalera python 3 och p
 * bow.png
 * bow_drawn.png
 * [pygame_textinput] (https://github.com/Nearoo/pygame-text-input)
+
 För att köra spelet så kör man huvudProgramet.py med python3 
+
 ###eventuella fel
 om spelet inte kör så gissar jag på att något av följande är fel:
 * du kör filen i något annat är python3 
