@@ -1,13 +1,12 @@
-import pygame, sys,shelve
-import wumpusclasses
-import pygame_textinput #modul från en cool snubbe på github som kallas NSasquatch
+import pygame, sys,shelve#standard moduler i python
+import wumpusclasses#min fil med klasser för spelet
 
+import pygame_textinput #modul från en cool snubbe på github som kallas "Nearoo" se:
+#https://github.com/Nearoo/pygame-text-input
 
 #kommande raderna beskriver grundlägande saker för pygame
 
 pygame.init() #krav för att pygame ska funka
-FPS =30 #frames per second, antalet gånger skärmen updateras
-clock=pygame.time.Clock() #bra för senare bruk
 
 #färger som konstanter som skrivs som tupler i RGB
 BLACK       =(0,0,0)
@@ -28,11 +27,15 @@ BLUE        =(0,0,255)
 BLUE_LIGHT  =(100,100,255)
 BLUE_DARK   =(0,0,150)
 
+#nedan skapas några konstanter
 SCREEN_SIZE= SCREEN_WIDTH,SCREEN_HEIGHT=(1280,720) #tuple/konstanter för fönstrets dimensionering
 main_screen= pygame.display.set_mode(SCREEN_SIZE) #skapar skärmen som man ritar på
 BOARD_WIDTH,BOARD_HEIGHT=15,12 #antalet rutor spelplanen har
-BOARD_SQUARE_WIDTH,BOARD_SQUARE_HEIGHT=60,60
-pygame.display.set_caption('Wumpus')
+BOARD_SQUARE_WIDTH,BOARD_SQUARE_HEIGHT=60,60#antalet pixlar som varje ruta får
+FPS =30 #frames per second, antalet gånger i sekunden skärmen updateras
+clock=pygame.time.Clock() #klocka för FPS i pygame
+
+pygame.display.set_caption('Wumpus')#texten för spelrutan
 
 #genelt så skrivs funktionerna med argumenten i ordningen
 #x kordinat, y kordinat, bredden, höjden för det som ritas på skärmen
@@ -82,7 +85,7 @@ def text_button(x,y,width,height,text,color,active_color,action=None,action_argu
         message_box(x,y,width,height,text,color)
         
 def close_game(state=None) :#stänger hela programet med eventuel funktion när det stängs
-    #state syftar på vad som ska hända när programet stäng exempelvis kan ett medelande duka upp
+    #state syftar på vad som ska hända när programet stäng exempelvis kan ett medelande dyka upp
     pygame.quit() #stänger pygame modulen
     sys.exit() #stänger programet
 
@@ -103,8 +106,8 @@ def close_game(state=None) :#stänger hela programet med eventuel funktion när 
 
 def paint_room(x,y,directions,content=None,near_content=()) :#ritar ett rum beroende på ienhåll och
     #riktningarna. ritas vid x,y är kordinaten för rummet
-    #rummet förväntas vara 60X60 men där det är möjligt används konstanterna för höjd/bredd
-    #diections or en lista eller tupple som beskriver alla riktningarna från rummet
+    #rummet förväntas vara 60X60
+    #diections or en lista eller tupple som beskriver alla riktningarna frön rummet
     #content är innehållet i rummet
     
     #rummet ritas som en cirkel med rektanglar som sticker ut, rummets färg beror på närliggande
@@ -112,7 +115,7 @@ def paint_room(x,y,directions,content=None,near_content=()) :#ritar ett rum bero
 
 
 #kodupprepning?
-    #nedan är if komandom om vilken förg det ska vara beroende på närliggande grejer
+    #nedan är if komandom om vilken färg det ska vara beroende på närliggande grejer
     if near_content.count('hole') and near_content.count('bat') :
         color=BLUE_DARK
     elif near_content.count('hole') :
@@ -164,50 +167,49 @@ def display_rooms(night_vision=False):#funktion som går igenom matrisen för al
 
     #om rummet är besökt ska det ritas en bild, som ritas med paint_room
 
-    for x in range(BOARD_WIDTH) :
-        for y in range(BOARD_HEIGHT) :
-            draw_x=x*BOARD_SQUARE_WIDTH
-            draw_y=y*BOARD_SQUARE_HEIGHT
+    for x in range(BOARD_WIDTH) :#vi har en loop som går igenom varje x och y i matrisen beroende
+        for y in range(BOARD_HEIGHT) :#på konstanterna av brädets volym, kallar dom x/y
+            draw_x=x*BOARD_SQUARE_WIDTH #avgör vart x/y ska ritas som kordinat, beroende på
+            draw_y=y*BOARD_SQUARE_HEIGHT#vilket x/y och pixelstorleken på var ruta
             if matrix.call_object(x,y)==None or not(matrix.call_object(x,y).room_visited() or night_vision) :
-                #ritar en svart ruta
+                #if ovan avgör om man ska rita svart ruta, ritar sen en svart ruta
                 pygame.draw.rect(main_screen,BLACK,(draw_x,draw_y,BOARD_SQUARE_WIDTH,BOARD_SQUARE_HEIGHT))
             else:#om det ska ritas ett rumm
-                path_directions=(matrix.call_object(x,y)).path_directions()
-                content=(matrix.call_object(x,y)).get_content()
+                #konstanterna tar riktningarna man kan ta i rummet samt inehåll
+                path_directions=(matrix.call_object(x,y)).path_directions()#möjliga riktnninngar
+                content=(matrix.call_object(x,y)).get_content()#rummets inehåll
+                near_content=matrix.get_near_content(x,y)#närliggande inehäll
                 
-                near_content=matrix.get_near_content(x,y)
-                paint_room(draw_x,draw_y,path_directions,content,near_content)
-    
-                
+                paint_room(draw_x,draw_y,path_directions,content,near_content)#ritar rummet
 
 #nedan ritas wumpus och jägaren, båda tar hjälp av des lämpade objekt på heapen och ritar sedan
 
 def paint_wumpus () :#funktion som ritar Wumpus
     #tänket bakom funktionen är helt enkelt att rita en importerad bild på rätt plats
     x=BOARD_SQUARE_WIDTH*wumpus.get_x()#tar objektet wumpus x och formulerar vart det ska ritas
-    y=BOARD_SQUARE_HEIGHT*wumpus.get_y()
+    y=BOARD_SQUARE_HEIGHT*wumpus.get_y()#tar objektet wumpus y och formulerar vart det ska ritas
     wumpus_pic=pygame.image.load('wumpus.png')#bilden på wumpus som är 60x60
-    main_screen.blit(wumpus_pic,(x,y))
+    main_screen.blit(wumpus_pic,(x,y))#ritar bilden
     
 def paint_hunter () :#funktionen som ritar jägaren
     #jägaren kommer ritas som en circel med en bild på en pilbåge på, när man drar bågen används
     #en annan bild, cirkeln ska ändra färg när wumpus är nära
     #hunter är ett object för jägaren som har metorder som ankallas, se wumpusclasses
-    x=BOARD_SQUARE_WIDTH*hunter.get_x()
+    x=BOARD_SQUARE_WIDTH*hunter.get_x()#jagarens x/y i pixlar
     y=BOARD_SQUARE_HEIGHT*hunter.get_y()
     radius=10#radien för cirkeln som markerar jägaren 
     circle_thickness=0#cirkelns tjocklek (noll betyder fylld)
     wumpus_close_color=RED#färgen på cirkeln när wumpus är nära
-    not_close_color=YELLOW#förgen när wumpus inte är nära
+    not_close_color=YELLOW#färgen när wumpus inte är nära
     if hunter.hunter_senses(*wumpus.get_xy()).count('wumpus') :#wumpus är nära
         color=wumpus_close_color#färgen som cirkeln får
-    else :
+    else :#wumpus r inte nära
         color=not_close_color
         
     if hunter.is_shooting():#är bågen dragen, ta då bilden när den är dragen, ta annars den andra
-        bow_pic=pygame.image.load('bow_drawn.png')
+        bow_pic=pygame.image.load('bow_drawn.png')#bild på dragen båge
     else :
-        bow_pic=pygame.image.load('bow.png')
+        bow_pic=pygame.image.load('bow.png')#bild på odragen båge
     pygame.draw.circle(main_screen,color,(int(x+BOARD_SQUARE_WIDTH/2),int(y+BOARD_SQUARE_HEIGHT/2)),radius,circle_thickness)#ritar cirkeln som representerar jägaren 
     main_screen.blit(bow_pic,(x,y))#ritar bilden på pilgågen
     
@@ -226,14 +228,14 @@ def direction_to_text(direction):#gör om en mattematisk riktning till text, dvs
 
 def hunter_senses_text():#texten som skrivs när jägaren är brevid wumpus eller hinder
     #skulle lika gärna kunna vare en metod -_-
-    sense_list=hunter.hunter_senses(*wumpus.get_xy())
-    text_list=[]
+    sense_list=hunter.hunter_senses(*wumpus.get_xy())#listan på vad jägaren känner
+    text_list=[]#listan på texten som ska skrivas, fylls med tiden
     for sense in list(set(sense_list)) :#loop som går igenom alla unika element
-        if sense=='wumpus' :
+        if sense=='wumpus' :#wumpus är nära
             text_list.append('I smell Wumpus.')
-        elif sense =='hole' :
+        elif sense =='hole' :#ett hål är nära
             text_list.append('I feel the wind of a bottomless pit.')
-        elif sense=='bat' :
+        elif sense=='bat' :#en fladdermus är nära
             text_list.append('I hear the sound of flying rats.')
     return text_list
 
@@ -241,7 +243,7 @@ def senses_text_box (x,y,width=350,height=120,color=BLUE_LIGHT):#ritar rutan dä
     #hinder och statistik dycker upp
     #color är färgen på rutan
     font_size=20#storleken på texten
-    font='comicsansms'#textens forn
+    font='comicsansms'#textens font
     text_color=BLACK#färgen på texten
     space_between_text= 2#mellanrummet mellan vraje rad
     text_height=font_size + space_between_text#utrymmet var rad får(inka mellanrum)
@@ -249,31 +251,31 @@ def senses_text_box (x,y,width=350,height=120,color=BLUE_LIGHT):#ritar rutan dä
     turn =0#hur många gånger man skrivit en text, så man kan räkna utrymme
     for text in (hunter.get_statistics_string(),*hunter_senses_text()) :#texten som ska skrivas
         message(x,y+turn*text_height,font_size,text,font,text_color,True)#ritar text
-        turn+=1
+        turn+=1#man har nu ritat en rad till
 
 def hunter_move_by_input(direction=None,toggle_shoot=False):#jägaren rör sig eller skjuter av input
-    #notera att den körs i en loop så den kör om och om igen 30 gånger i sekunden
+    #notera att den körs i en loop så den kör om och om igen varje frame gånger i sekunden
 
     if toggle_shoot :#ska han dra bågen/sluta dra bågen
-        hunter.shoot_toggle()
+        hunter.shoot_toggle()#metod för att sluta/dra
     elif hunter.get_possible_directions().count(direction) == 1 :
-        #om han inte ska har spelaren valt en riktning som går att ta
-        if  hunter.is_shooting()  :#han skjuter om bågen dragits
+        #ovan avgörs om spelaren har valt en riktning som går att ta
+        if  hunter.is_shooting()  :#hen skjuter om bågen dragits
             hunter.hunter_shoot(direction,*wumpus.get_xy())#skjuter
-        else :#annars flyttars han 
+        else :#annars flyttars hen 
             hunter.hunter_move(direction)
         #efter att jägaren skjutit eller gått så går wumpus
-        wumpus.wumpus_move(*hunter.get_xy())
-        hunter.got_killed(*wumpus.get_xy())
+        wumpus.wumpus_move(*hunter.get_xy())#wumus rör sig 
+        hunter.got_killed(*wumpus.get_xy())#avgör om man dött
 
         
         
 def hunter_buttons (x,y,mouse_click) :#knappar för spelet och triggar att wumpus ska röra sig
     #är tänkt att knapparna ska ligga som ett kors där skjut är i mitten och gåriktningar runt om
     button_dimension =100 #bredd och höjd på var knapp
-    between_space=10#rummet mellan alla knappar
+    between_space=10#mellanrummet mellan alla knappar
     #nedan beskrivs koordinaten för knapparnas kollektiva övre vänstra hörn dvs det är ingen knapp
-    #där men men som grupp blir det ett hörn
+    #där men som grupp blir det ett hörn
     collective_corner_xy=collective_corner_x,collective_corner_y=x,y
     color=BLUE#färg på knappen
     active_color=BLUE_LIGHT#färg när musen är över knappen
@@ -297,14 +299,14 @@ def hunter_buttons (x,y,mouse_click) :#knappar för spelet och triggar att wumpu
         elif turn ==7 :
             direction=2
         if turn==4 :#knappen för att man ska skjuta
-            text='shoot'
+            text='shoot'#text på knappen
             if hunter.get_number_of_arrows()<=0:#slut på pilar
                 impossible_action=True
         elif turn%2 :# ska det finnas knapp rör dig knapp
             text=direction_to_text(direction)
             if hunter.get_possible_directions().count(direction) == 0 :#kan inte gå åt hållet
                 impossible_action=True
-        else :#det är intgen knapp så inget ska ritas
+        else :#det är ingen knapp så inget ska ritas
             continue
         
         if impossible_action :# om det inte går blir knappen en textruta
@@ -341,7 +343,7 @@ def run_game(new_difficulty='medium') :#kör spelet, börjar med att generera pl
     while True :#huvudloop som körs tills spelet slutar
         mouse_click=False#man förutsätter att musen inte tryckts, den kan ändras senare
         events=pygame.event.get()#lista på alla event från användaren typ knaptryck musen flytas etc
-        for event in events :
+        for event in events :#man kallar event för ette evetnt pygame regestrerat
             if event.type== pygame.QUIT :#om man väljer att stänga programet
                 close_game ()
             if event.type == pygame.MOUSEBUTTONDOWN:#om man clickar med en musknapp
@@ -352,7 +354,8 @@ def run_game(new_difficulty='medium') :#kör spelet, börjar med att generera pl
                     night_vision=not night_vision
                 if event.key==pygame.K_m :#man vill se/sluta se wumpus
                     show_wumpus=not show_wumpus
-                #nedan beskrivs piltangenter och vart dom leder
+                #nedan beskrivs vilken input som jägaren får från tangenter så som
+                #piltangenter och vart dom leder (givestvis räknas wasd) samt dra bågen
                 if event.key==pygame.K_w or event.key==pygame.K_UP :
                     hunter_move_by_input(0)
                 if event.key==pygame.K_d or event.key==pygame.K_RIGHT :
@@ -374,14 +377,21 @@ def run_game(new_difficulty='medium') :#kör spelet, börjar med att generera pl
         if  hunter.has_game_ended() :#om spelet slutat via vinst eller förlust
             if win_screen(events) == 'quit':#kör funktionen för när spelat slutar
                 break
-        print(events)#spelar man och vinner flera gånger kommer den printa sista gamal eventet också, fast bara när man vunnit så inget gamalt när man spelar WTF!!!! 
-        pygame.display.update()
-        clock.tick(FPS)
+            
+        #print(events)#bugg:spelar man och vinner flera gånger kommer den printa sista gamal eventet också, fast bara när man vunnit så inget gamalt när man spelar WTF!!!! 
+        pygame.display.update()#updaterar med det som ritas
+        clock.tick(FPS)#pygames klocka ska ticka efter fps
 
 #nedan kommer massa info om sidor annat än spelsidan
 def win_screen (events=[]) :#funktionen som dyker upp när man vunnit och ska skriva sitt namn
     #om man inte vunnit står det bara en text om hur man dog
-    cause_of_end=hunter.cause_of_ended_game(*wumpus.get_xy())
+
+    events=text_input.update(pygame.event.get())#ta ort när buggen är fixad
+    #vet att raden ovan borde ta in events från inputen men de är en bugg som sådan :
+    #när man skriver nått första gången är det bra men andra gången så sparas det sista eventet som gjrodes från förra gången, alltså blir det som om enter är nedtryckt konstant nästa gång man skriver, detta beror på inputen man får från run_game men blir fuckad fast bara när spelet slutat
+    #eftersom man inte tar input från spelets huvudloop så ger det väldigt trögt när man skriver
+    
+    cause_of_end=hunter.cause_of_ended_game(*wumpus.get_xy())#hur man dog
     enter_name_x,enter_name_y=410,410#x,y för rutan man fyller i namn
     enter_name_width,enter_name_height=400,50#dimensioner för rutan man fyller i namn på
     enter_name_text_color=RED #färgen på texten när man skriver sitt namn
@@ -401,13 +411,11 @@ def win_screen (events=[]) :#funktionen som dyker upp när man vunnit och ska sk
     if cause_of_end=='win' :#om man vunnit och ska skriva namn
         pygame.draw.rect(main_screen,WHITE,(enter_name_x,enter_name_y,enter_name_width,enter_name_height))#rutan som namnet skrivs på
         message(enter_name_x+10,enter_name_y+10,enter_name_font_size,enter_name_text,None,enter_name_text_color,True)#inledande medelandet till input
-        #print(events)#ger märkliga utslag när man vunit flera gånger
-        if text_input.update(pygame.event.get()) and text_input.get_text()!='':#om man tryckt enter
-            #och man har skrivit nått
-            #vet att raden ovan borde ta in events men de är en bugg som sådan :
-            #när man skriver nått första gången är det bra men andra gången så sparas det sista eventet som gjrodes från förra gången, alltså blir det som om enter är nedtryckt konstant nästa gång man skriver, detta beror på inputen man får från run_game men blir fuckad fast bara när spelet slutat 
-            name=text_input.get_text()
-            save_score(name)
+        #print(events)#bugg:ger märkliga utslag när man vunit flera gånger
+        
+        if events and text_input.get_text()!='':#om man tryckt enter och man har skrivit nått
+            name=text_input.get_text()#namnet man skrivit
+            save_score(name)#funktionen sör att spara
             text_input.input_string=''#man ska nollstålla text för nästa gång
             return 'quit'
         main_screen.blit(text_input.get_surface(),(int(enter_name_x+len(enter_name_text)*enter_name_font_size/2.5),enter_name_y+10))#ritar den skrivna inputsttexten
@@ -423,29 +431,30 @@ def save_score(name='null') :#funktionen som kör när man ska spara spelerens h
 
 def high_score_screen():#funktionen som körs när man ska se föregående spelares high score
     button_collective_corner_x,button_collective_corner_y=10,200
+
+    #nedan är variabler för hur listan ska sorteras med knappar
     button_height=100#hur höga ska knapparna vara
     button_width=100#bredden på knapparna
-    button_space=20
-
+    button_space=20#mellanrum mellan knappar
+    collective_corner_x,collective_corner_y=10,200#första knappens hörn
     
     rect_height=600#hur höga ska  vara rektanglarna vara
     rect_width=400#bredden på rektnaglarna
     rect_space=20#mellanrumet mellan rektanglarna
-    collective_corner_x,collective_corner_y=10,200#första knappens hörn
-    header_size=50
-    turn=0
-    wumpus_file =shelve.open("wumpus_scores.dat","r")
-    index='moves'
-    greatest_to_smallest=False
-    list_font_size=12
-    list_font='ubuntumono'
-    for difficulty in ('easy','medium','hard') :
-        local_x=collective_corner_x+turn*(rect_width+rect_space)
-        local_y=collective_corner_y
-        if turn ==0 :#lätt
+    header_size=50#font storlek för rubriken för varje spalt med highscore
+    list_rect_turn=0#hur många gunger loopen körts för en rektangel med svårighetsgrad
+    wumpus_file =shelve.open("wumpus_scores.dat","r")#öpnar och löser sparlilen
+    index='moves'#index man sorterar efter
+    greatest_to_smallest=False#ordningen man ska sortera i 
+    list_font_size=12#varje rads fontstorlek
+    list_font='ubuntumono'#fonten man skriver listan med, förslagsvis någon med monospace
+    for difficulty in ('easy','medium','hard') :#går igenom varje spalt med svårighetsgrad
+        local_x=collective_corner_x+list_rect_turn*(rect_width+rect_space)#x för spalten
+        local_y=collective_corner_y#y för spalten
+        if list_rect_turn ==0 :#lätt
             color=GREEN
             header='casual'
-        elif turn==1 :#medium
+        elif list_rect_turn==1 :#medium
             color=YELLOW
             header='medium'
         else:#svår
@@ -454,18 +463,17 @@ def high_score_screen():#funktionen som körs när man ska se föregående spela
         pygame.draw.rect(main_screen,color,(local_x,local_y,rect_width,rect_height))
         message(local_x+rect_width/2,local_y+header_size/2,header_size,header)
         sorted_score_list=sort_dict_by_index(wumpus_file['statistics_'+difficulty],index,greatest_to_smallest)
-        score_board_turn=0
+        score_board_turn=0#räknar hur många gånger man skrivit en enskild rad med resultat
         for singel_score in sorted_score_list :#loppen som ritar varje omgång, bildar först en text
-            printed_text=(' %2d'%(score_board_turn+1))+('.name:%10.10s' %singel_score['name'])+('   moves:%3d'%singel_score['moves'])+('   found rooms:%3d' %singel_score['found rooms']) +('   shots:%3d' %singel_score['shots fired'])
-            message(local_x,local_y+header_size+score_board_turn*list_font_size,list_font_size,printed_text,list_font,place_corner=True)
+            printed_text=(' %2d'%(score_board_turn+1))+('.name:%10.10s' %singel_score['name'])+('   moves:%3d'%singel_score['moves'])+('   found rooms:%3d' %singel_score['found rooms']) +('   shots:%3d' %singel_score['shots fired'])#texten som skrivs för en rad
+            message(local_x,local_y+header_size+score_board_turn*list_font_size,list_font_size,printed_text,list_font,place_corner=True)#ritar medelandet 
             score_board_turn+=1
         
-        turn+=1
-    #message(x,y,font_size,text,font='comicsansms',color=BLACK,place_corner=False)
+        list_rect_turn+=1
     wumpus_file.close()
     
 def sort_dict_by_index(sort_list,index,greatest_to_smallest=True):#sorterar en lista beroende på
-    #ett index och om den sk sorteras uppifrån och ner
+    #ett index och om den ska sorteras uppifrån och ner
     new_list=sorted(sort_list,key=lambda  k: k[index])
     if greatest_to_smallest :
         new_list.reverse()
@@ -509,24 +517,23 @@ def manual_screen (): #funktion man kör för att visa instruktions sidan
           'askjfdhakos  shj shgdjf dfdf asdf sffg asfgds asffda sdfasgad jhjhs ss gfds gffd',
           'jhgfd hgfd hbgvf hbvgf hgvf hgfd jhgf jhgf jhgfdddd ghagsfdh sad sd gfd hgfds hgf hgfds']
     #det är inte snyggase sättet med lista men va fan det funkar i alla fall
-    turn=0
+    turn=0#hur många rader som skrivits
     for line in text :
         message(corner_x+10 ,corner_y+turn*30,30,line,'latinmodernsans',place_corner=True)
         turn+=1
 
 
 def main_menu() :#huvudmenyn som ska köra när spelet startar
-    #text_button(x,y,width,height,text,color,active_color,action=None,action_arguments=(),mouse_click=None) :
-    action =None
+    action =None#variabel som betyder vilken funtion som ska köras som senare körs
     while True :
-        main_screen.fill(WHITE)
-        mouse_click=False
+        main_screen.fill(WHITE)#ritar bakgrunden med vitt
+        mouse_click=False#om musen har tryckts, kan ändras senare
         for event in pygame.event.get() :
-            if event.type == pygame.QUIT :
+            if event.type == pygame.QUIT :#stäng programet
                 close_game()
-            if event.type == pygame.MOUSEBUTTONDOWN:
+            if event.type == pygame.MOUSEBUTTONDOWN:#har man tryckt musen
                 mouse_click=True
-        #nedan kommer kodupprepning från annan game_mode_menu_screen
+        #nedan kommer semi kodupprepning från annan game_mode_menu_screen
         
         button_height=100#hur höga ska knapparna vara
         button_width=400#bredden på knapparna
@@ -546,28 +553,29 @@ def main_menu() :#huvudmenyn som ska köra när spelet startar
                 color=RED
                 active_color=RED_LIGHT
             if True== text_button(collective_corner_x+(button_width+button_space)*turn,collective_corner_y,button_width,button_height,text,color,active_color,mouse_click=mouse_click) :
-                if turn == 0 :
+                if turn == 0 :#highscore rundan
                     action=high_score_screen
-                elif turn ==1 :
+                elif turn ==1 :#spela och välj svårighetsgrad
                     action=game_mode_menu_screen
-                else :
+                else :#instruktioner
                     action=manual_screen
-        if action != None :
+        if action != None :#kör funktionen man anget 
             action ()
-        pygame.display.update()
-        clock.tick(FPS)        
+        pygame.display.update()#uppdaterar det som ritas
+        clock.tick(FPS)
 
     
 def does_score_file_exist() :#ser om filen man sparar på finns med lista om inte, skapa den
     try :
-        wumpus_file =shelve.open("wumpus_scores.dat","r")
+        wumpus_file =shelve.open("wumpus_scores.dat","r")#öpnar och om det inte blir error
     except :#något osäker på typen av error så jag kör allmänt på raden ovan
         print('file not found, creating new')
         wumpus_file =shelve.open("wumpus_scores.dat")#skapar filen man vill åt
-        wumpus_file['statistics_easy']=[]        
+        #nedan skapas nyckel för varje svårighetsgrad
+        wumpus_file['statistics_easy']=[]   
         wumpus_file['statistics_medium']=[]
         wumpus_file['statistics_hard']=[]        
-    wumpus_file.close()
+    wumpus_file.close()#stänger filen
         
         
 #nedan börjar vi med att skapa objekt som sparas på heapen
@@ -580,9 +588,9 @@ hunter=wumpusclasses.Hunter(matrix,difficulty)
 text_input=pygame_textinput.TextInput()
 
 
-does_score_file_exist()
+does_score_file_exist()#ser om highscorefilen finns
 
-main_menu()
+main_menu()#kör programet som börjar med menyn
 
 
 #nedan finns paperskorgen, kan vara bra när man vill ha tillbaks grejer
