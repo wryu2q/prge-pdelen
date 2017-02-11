@@ -10,13 +10,10 @@ class Room (object) :
     #det finns ett rum brevid sig eller vägg åt varje håll om det står None har
     #det inte genererats klart, True om det finns dörr och False om det är vägg
 
-    #vad rummet inehåller exempelvis om det finns ett dödshål i rummet, notera att det inte är
-    #tänkt att Wumpus eller jägaren är ett inehåll, om inehållet är None så är det bara ett rum
+    #vad rummet inehåller exempelvis om det finns ett dödshål i rummet, notera att Wumpus eller
+    #jägaren inte är ett inehåll, om inehållet är None så är det bara ett rum
 
     #ska även inkludera om rummet besökts av spelaren
-    
-    #det är möjligt att jag inkluderar rummets x och y men tvivelaktigt eftersom objektten sparas i
-    #en matris dvs, rummet sparas i en lista så objektets namn ankalas ej utan dess kordinat ankalas
 
     #generelt sätt skrivs riktningarna i ordningen med upp först och sedan som klockan om det
     #ska inkludera siffror så blir up 0 och sedan ökar det med 1 i ordningen ovan
@@ -160,7 +157,8 @@ class Room_matrix (Matrix):#en matris som genererar en matris med rum
     #funktionen ska köra ända tills man är nöjd med den slumpade laburinten och är det så att
     #man slumpat en massa laburinter utan bra resultat tar man bara den senaste
         self.number_of_generated_mazes=0#antal slumpade laburinter
-        while self.number_of_generated_mazes<1000 :#loop som körs tills jag är nöjd med laburinten
+        while self.number_of_generated_mazes<1000 :#loop som körs tills jag är nöjd med labyrinten
+            #jag är nöjd när testet i difficulty klassen säger att laburinten är ok.
             start_x,start_y= int(self.x_dimension/2),int(self.y_dimension/2)#där genereringen börjar
             self.reset_matrix()
             self.add_room(start_x,start_y)#skapar startrummet

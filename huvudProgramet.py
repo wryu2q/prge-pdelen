@@ -36,6 +36,8 @@ FPS =30 #frames per second, antalet gånger i sekunden skärmen updateras
 clock=pygame.time.Clock() #klocka för FPS i pygame
 
 pygame.display.set_caption('Wumpus')#texten för spelrutan
+window_icon=pygame.image.load('wumpus.png')
+pygame.display.set_icon(window_icon)#bilden för spelrutan
 
 #genelt så skrivs funktionerna med argumenten i ordningen
 #x kordinat, y kordinat, bredden, höjden för det som ritas på skärmen
@@ -89,6 +91,13 @@ def close_game(state=None) :#stänger hela programet med eventuel funktion när 
     pygame.quit() #stänger pygame modulen
     sys.exit() #stänger programet
 
+def key_command() :
+    pressed_keys=pygame.key.get_pressed()#lista på 323 element,1 eller 0 för var tangentbords knapp
+    ctrl_down= (pressed_keys[306] or pressed_keys[305])#höger eller vänster controll
+    q_down=pressed_keys[113]#knappen q
+    if ctrl_down :#är kontroll nere?
+        if q_down :#ctrl q för att stänga
+            close_game()
     
 #nedon kommer logik om själva spelet och spelplanen
 
@@ -242,7 +251,7 @@ def hunter_senses_text():#texten som skrivs när jägaren är brevid wumpus elle
 def senses_text_box (x,y,width=350,height=120,color=BLUE_LIGHT):#ritar rutan där texten om nära
     #hinder och statistik dycker upp
     #color är färgen på rutan
-    font_size=20#storleken på texten
+    font_size=30#storleken på texten
     font='comicsansms'#textens font
     text_color=BLACK#färgen på texten
     space_between_text= 2#mellanrummet mellan vraje rad
@@ -341,6 +350,7 @@ def run_game(new_difficulty='medium') :#kör spelet, börjar med att generera pl
     wumpus.place_random_empty_room()#placerar wumpus
     hunter.game_restart()#placerar jägaren och nolstäler statistik
     while True :#huvudloop som körs tills spelet slutar
+        key_command()
         mouse_click=False#man förutsätter att musen inte tryckts, den kan ändras senare
         events=pygame.event.get()#lista på alla event från användaren typ knaptryck musen flytas etc
         for event in events :#man kallar event för ette evetnt pygame regestrerat
@@ -364,7 +374,7 @@ def run_game(new_difficulty='medium') :#kör spelet, börjar med att generera pl
                     hunter_move_by_input(2)
                 if event.key==pygame.K_a or event.key==pygame.K_LEFT :
                     hunter_move_by_input(3)
-                if event.key==pygame.K_SPACE :#space för att dra bågen
+                if event.key==pygame.K_SPACE and hunter.get_number_of_arrows()>0:#space för dra båge
                     hunter_move_by_input(toggle_shoot=True)
 
         display_rooms(night_vision)#ritar alla rum
@@ -437,7 +447,6 @@ def high_score_screen():#funktionen som körs när man ska se föregående spela
     button_width=100#bredden på knapparna
     button_space=20#mellanrum mellan knappar
     collective_corner_x,collective_corner_y=10,200#första knappens hörn
-    
     rect_height=600#hur höga ska  vara rektanglarna vara
     rect_width=400#bredden på rektnaglarna
     rect_space=20#mellanrumet mellan rektanglarna
@@ -507,25 +516,44 @@ def game_mode_menu_screen():#sidan menyn som dykerupp när man ska välja svåri
         
 def manual_screen (): #funktion man kör för att visa instruktions sidan
     #kommer mest vara en text med en knapp som leder tillbaks till menyn eller stänger programet
-    corner_x,corner_y=0,200
-    pygame.draw.rect(main_screen,BLUE_LIGHT,(corner_x,corner_y,1500,400))
-    text=['du är i en laburint och ska döda ett monster etc jag ska skriva dna text lite mer',
-          'ambisjöst senare men för närvarande får det bli som det böir eftersom jag kollar ',
-          'inte på texten två gånger så det blir sär asså kolla bara på föregående det hänger',
-          'inte äns ihop men aja detta är mest för att fylla med lite text satt man kan se hur',
-          'det kan bli i test varsionen kunde lika järna skrivit blah blah blah blah hgskda',
-          'askjfdhakos  shj shgdjf dfdf asdf sffg asfgds asffda sdfasgad jhjhs ss gfds gffd',
-          'jhgfd hgfd hbgvf hbvgf hgvf hgfd jhgf jhgf jhgfdddd ghagsfdh sad sd gfd hgfds hgf hgfds']
+    corner_x,corner_y=30,150
+    pygame.draw.rect(main_screen,BLUE_LIGHT,(corner_x,corner_y,SCREEN_WIDTH-2*corner_x,SCREEN_HEIGHT-corner_y-30))
+    text=['Detta är spelet Wumpus som går ut på att spelaren ska döda monstret Wumpus. För att spela spelet trycker du på ”play” och väljer en',
+          'svårighetsgrad. För att se statistik om spelare som spelat spelet och vunnit kan du trycka på ”highscore”. För att stänga programmet',
+          'så kan du trycka på fönstrets kryss eller så kan du trycka ctrl-q.',
+          '  ',
+          'Själva spelet utspelar sig i en slumpad labyrint där spelet går ut på att spelaren/jägaren ska döda monstret Wumpus med sin pilbåge.',
+          'I labyrinten väntar faror som dödshål som man kan ramla ner i och dö, fladdermöss som plockar upp jägaren och placerar hen på en',
+          'slumpad plats och givetvis Wumpus som rör sig och kan äta upp jägaren om han kommer i kontakt.',
+          '  ',
+          'spelaren markerats med en prick med en pilbåge på, för att röra sig så kan hen antingen trycka på piltangenterna/ wasd samt dom blåa',
+          'knapparen i aktivitetsmenyn. För att jägaren ska ha någon aning om vad som finns i omgivningen så har varje rum en viss färg beroende',
+          'på vad som finns intill. Om ett rum är ljusgrått så leder alla gångarna till tomma rum, om det är blått så leder en eller fler av',
+          'gångarna åt fladdermöss, om ett rum är mörkgrått så så leder en eller fler av gångarna mot ett hål och ett rum är mörkblått så leder',
+          'det till både hål och fladdermöss. Om Wumpus är nära så kommer inte något rum ändra färg utan den gula prick som markerar spelaren',
+          'kommer istället bli röd. Ett annat sätt att få reda på vad som finns i närheten är genom läsa i den blå rutan som finns uppe i hörnet.',
+          'I rutan står även hur många pilar man har, hur många steg man tagit och  hur många rum man hittat.',
+          '  ',
+          'För att skjuta så trycker man på mellanslag eller så kan man trycka på mittenknappen hos dom blå tangenterna i aktivitetsfältet. Efter',
+          'det så kommer jägaren dra bågen, om man vill släppa utan att skjuta så kan man trycka på samma knapp igen. Om man vill skjuta så måste',
+          'bågen vara dragen och därefter så trycker man på en av riktningarna man normalt skulle gå med för att skjuta åt det hållet. Att dra',
+          'bågen/sluta dra kommer inte trigga Wumpus att röra sig däremot så kan monstret röra sig om man skjuter. För varje skott man skjuter',
+          'så förlorar man en pil, om man har 0 pilar kan inte skjuta. Som tur är så kan man plocka upp pilar om man har tur.',
+          '   ',
+          'Om man blir uppäten av Wumpus eller trillar ner i ett hål så står det att att man förlorat och man slutar genom att trycka på',
+          '”main menu”. Om man vinner så kommer det upp en ruta där det står att man vunnit och så kan man skriva in sitt namn och avsluta',
+          'med enter, därefter så registreras namnet ihop med statistik som man sedan kan se via huvudmenyn.' ]
     #det är inte snyggase sättet med lista men va fan det funkar i alla fall
     turn=0#hur många rader som skrivits
     for line in text :
-        message(corner_x+10 ,corner_y+turn*30,30,line,'latinmodernsans',place_corner=True)
+        message(corner_x+10 ,corner_y+turn*18,20,line,'latinmodernsans',place_corner=True)
         turn+=1
 
 
 def main_menu() :#huvudmenyn som ska köra när spelet startar
     action =None#variabel som betyder vilken funtion som ska köras som senare körs
     while True :
+        key_command()
         main_screen.fill(WHITE)#ritar bakgrunden med vitt
         mouse_click=False#om musen har tryckts, kan ändras senare
         for event in pygame.event.get() :
