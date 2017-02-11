@@ -15,10 +15,16 @@ För att köra spelet så kör man huvudProgramet.py med python3
 ###Eventuella fel
 Om spelet inte kör så gissar jag på att något av följande är fel:
 * Du kör filen i något annat är python3 
+<<<<<<< HEAD
 * Du har glömt att hämta [pygame_textinput] (https://github.com/Nearoo/pygame-text-input) som inte ligger här eller döpt filen annat än pygame_textinput.py
 * Pygame inkluderas inte i python3 och kan vara meckigt att instalera så du kan ha gjort fel
 ~~
 * Låg IQ ~~
+=======
+* Du har glömt att hämta [pygame_textinput.py] (https://github.com/Nearoo/pygame-text-input) som inte ligger här eller döpt filen annat än pygame_textinput.py
+* Pygame inkluderas inte i python3 och kan vara meckigt att instalera så du kan ha gjort fel
+* ~~Låg IQ~~
+>>>>>>> d8f48f37269070e45a3312f9a1df79815d792269
 
 Ett fel som troligen kommer uppstå är att listor kan se ut att vara ostruckturerade eftersom spelet för närvarande använder sig av ubuntumono vilket är en font som finns för ubuntu. Angående fel med fonts så borde programet inte crasha om fonten inte finns med din version av pygame,eftersom pygame borde ta pygames standardfont om fonten saknas.
 ##Övrigt
